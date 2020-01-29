@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29613.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jaunty", "Jaunty\Jaunty.csproj", "{EFE04105-EC83-4761-BC07-C13A714093FC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jaunty.Tests", "Jaunty.Tests\Jaunty.Tests.csproj", "{3D137C49-759E-4BC7-98AE-943574E6E5EA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{88B7BFFD-8BB9-4C4A-AC1D-9DC89ACCE01A}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EFE04105-EC83-4761-BC07-C13A714093FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFE04105-EC83-4761-BC07-C13A714093FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFE04105-EC83-4761-BC07-C13A714093FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFE04105-EC83-4761-BC07-C13A714093FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D137C49-759E-4BC7-98AE-943574E6E5EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D137C49-759E-4BC7-98AE-943574E6E5EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D137C49-759E-4BC7-98AE-943574E6E5EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D137C49-759E-4BC7-98AE-943574E6E5EA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2080DCD3-6073-48BC-9AB8-BB4DF4C0F830}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>netcoreapp2.1</TargetFramework>
+	</PropertyGroup>
+	<ItemGroup>
+		<Compile Remove="Mysql\IntegrationTests\DeleteTests.cs" />
+		<Compile Remove="Mysql\IntegrationTests\InsertTests.cs" />
+		<Compile Remove="Mysql\IntegrationTests\UpdateTests.cs" />
+		<Compile Remove="Postgres\IntegrationTests\DeleteTests.cs" />
+		<Compile Remove="Postgres\IntegrationTests\InsertTests.cs" />
+		<Compile Remove="Postgres\IntegrationTests\UpdateTests.cs" />
+		<Compile Remove="SqlServer\IntegrationTests\DeleteTests.cs" />
+		<Compile Remove="SqlServer\IntegrationTests\InsertTests.cs" />
+		<Compile Remove="SqlServer\IntegrationTests\UpdateTests.cs" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="dapper" Version="2.0.30" />
+		<PackageReference Include="MySql.Data" Version="8.0.19" />
+		<PackageReference Include="npgsql" Version="4.1.2" />
+		<PackageReference Include="pluralize.net" Version="1.0.2" />
+		<PackageReference Include="System.Data.SqlClient" Version="4.8.0" />
+		<PackageReference Include="System.Data.SQLite" Version="1.0.112" />
+		<PackageReference Include="xunit" Version="2.4.1" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="2.4.1">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Jaunty\Jaunty.csproj" />
+	</ItemGroup>
+</Project>
