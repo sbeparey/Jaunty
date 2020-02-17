@@ -200,8 +200,8 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				}
 			};
 
-			var products = northwind.Connection.Top(10)
-											   .From<Product>()
+			var products = northwind.Connection.From<Product>()
+											   .Top(15)
 											   .Select<Product>(token: guid).ToList();
 
 			Assert.Equal("SELECT TOP 10 ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -227,6 +227,32 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			};
 
 			var products = northwind.Connection.From<Product>()
+											   .SelectDistinct<Product>(token: guid).ToList();
+
+			Assert.Equal("SELECT DISTINCT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
+							"UnitsOnOrder, ReorderLevel, Discontinued " +
+						 "FROM Products ", sql);
+
+			Assert.NotEmpty(products);
+			Assert.True(products[0].ProductId > 0);
+		}
+
+		[Fact]
+		public void SelectDistinctTopByFluent_Products_ReturnsAllProducts()
+		{
+			var guid = Guid.NewGuid();
+			string sql = null;
+
+			Jaunty.OnSelecting += (sender, args) =>
+			{
+				if (((Guid)sender).Equals(guid))
+				{
+					sql = args.Sql;
+				}
+			};
+
+			var products = northwind.Connection.From<Product>()
+											   .Top(10)
 											   .SelectDistinct<Product>(token: guid).ToList();
 
 			Assert.Equal("SELECT DISTINCT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
