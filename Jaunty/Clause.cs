@@ -70,7 +70,7 @@ namespace Jaunty
 
 		public class FromClause : Clause
 		{
-			public TableClause(IDbConnection connection, Type entityType, string alias = null)
+			public FromClause(IDbConnection connection, Type entityType, string alias = null)
 				: base(connection)
 			{
 				if (entityType is null)
@@ -82,7 +82,7 @@ namespace Jaunty
 				Alias = alias ?? GetTableName(entityType);
 			}
 
-			public TableClause(Clause clause, Type entityType, string alias = null) :
+			public FromClause(Clause clause, Type entityType, string alias = null) :
 				this(clause.Connection, entityType, alias)
 			{
 				PreviousClause = clause ?? throw new ArgumentNullException(nameof(clause));

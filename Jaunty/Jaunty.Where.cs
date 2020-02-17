@@ -6,15 +6,15 @@ namespace Jaunty
 {
 	public static partial class Jaunty
 	{
-		public static PartialConditionalClause Where(this TableClause tableClause, string column)
+		public static PartialConditionalClause Where(this FromClause fromClause, string column)
 		{
-			var conditionalClause = new ConditionalClause(tableClause);
+			var conditionalClause = new ConditionalClause(fromClause);
 			var partial = new PartialConditionalClause(conditionalClause);
 			partial.AddColumn(column);
 			return partial;
 		}
 
-		public static ConditionalClause Where<T>(this TableClause table, string column, T value)
+		public static ConditionalClause Where<T>(this FromClause table, string column, T value)
 		{
 			return GetCondition(table, column, ComparisonOperator.EqualTo, value);
 		}

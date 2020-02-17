@@ -104,33 +104,33 @@ namespace Jaunty
 		/// <summary>
 		/// Selects on From 
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="tableClause">From<T></param>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="fromClause">From<T></param>
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this TableClause tableClause, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this FromClause fromClause, object token = null, IDbTransaction transaction = null)
 		{
-			string sql = GetSelectSql<T>(tableClause);
+			string sql = GetSelectSql<T>(fromClause);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return tableClause.Connection.Query<T>(sql, null, transaction);
+			return fromClause.Connection.Query<T>(sql, null, transaction);
 		}
 
 		/// <summary>
 		/// Selects on From 
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="tableClause">From<T></param>
+		/// <param name="fromClause">From<T></param>
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> SelectDistinct<T>(this TableClause tableClause, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> SelectDistinct<T>(this FromClause fromClause, object token = null, IDbTransaction transaction = null)
 		{
-			string sql = GetSelectSql<T>(tableClause, distinct: true);
+			string sql = GetSelectSql<T>(fromClause, distinct: true);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return tableClause.Connection.Query<T>(sql, null, transaction);
+			return fromClause.Connection.Query<T>(sql, null, transaction);
 		}
 
 		/// <summary>
@@ -223,24 +223,24 @@ namespace Jaunty
 		//	return havingClause.Connection.Query<T>(sql.ToString(), null, transaction);
 		//}
 
-		public static LimitClause Limit(this TableClause tableClause, int limit)
+		public static LimitClause Limit(this FromClause fromClause, int limit)
 		{
-			return new LimitClause(tableClause, limit);
+			return new LimitClause(fromClause, limit);
 		}
 
-		public static LimitClause Top(this TableClause tableClause, int top)
+		public static LimitClause Top(this FromClause fromClause, int top)
 		{
-			return new LimitClause(tableClause, top);
+			return new LimitClause(fromClause, top);
 		}
 
-		public static TableClause From<T>(this IDbConnection connection, string alias = null)
+		public static FromClause From<T>(this IDbConnection connection, string alias = null)
 		{
-			return new TableClause(connection, GetType(typeof(T)), alias);
+			return new FromClause(connection, GetType(typeof(T)), alias);
 		}
 
-		public static JoinClause InnerJoin<T>(this TableClause tableClause, string alias = null)
+		public static JoinClause InnerJoin<T>(this FromClause fromClause, string alias = null)
 		{
-			return new JoinClause(tableClause, GetType(typeof(T)), alias);
+			return new JoinClause(fromClause, GetType(typeof(T)), alias);
 		}
 
 		public static JoinOnClause On(this JoinClause joinClause, string column1, string column2)
@@ -253,9 +253,9 @@ namespace Jaunty
 			return new JoinClause(joinOn, GetType(typeof(T)), alias);
 		}
 
-		public static OrderByClause OrderBy(this TableClause tableClause, string orderByColumn, SortOrder? sortOrder = null)
+		public static OrderByClause OrderBy(this FromClause fromClause, string orderByColumn, SortOrder? sortOrder = null)
 		{
-			return CreateOrderBy(tableClause, orderByColumn, sortOrder);
+			return CreateOrderBy(fromClause, orderByColumn, sortOrder);
 		}
 
 		public static OrderByClause OrderBy(this ConditionalClause conditionClause, string orderByColumn, SortOrder? sortOrder = null)
@@ -286,9 +286,9 @@ namespace Jaunty
 			return orderBy;
 		}
 
-		public static GroupByClause GroupBy(this TableClause tableClause, params string[] groupByColumns)
+		public static GroupByClause GroupBy(this FromClause fromClause, params string[] groupByColumns)
 		{
-			return CreateGroupBy(tableClause, groupByColumns);
+			return CreateGroupBy(fromClause, groupByColumns);
 		}
 
 		public static GroupByClause GroupBy(this ConditionalClause conditionClause, params string[] groupByColumns)
@@ -400,16 +400,16 @@ namespace Jaunty
 		/// Selects on From asynchronously 
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="tableClause">From<T></param>
+		/// <param name="fromClause">From<T></param>
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this TableClause tableClause, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this FromClause fromClause, object token = null, IDbTransaction transaction = null)
 		{
-			string sql = GetSelectSql<T>(tableClause);
+			string sql = GetSelectSql<T>(fromClause);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return await tableClause.Connection.QueryAsync<T>(sql, null, transaction);
+			return await fromClause.Connection.QueryAsync<T>(sql, null, transaction);
 		}
 
 		/// <summary>
@@ -487,22 +487,22 @@ namespace Jaunty
 
 		#region private methods
 
-		private static string GetSelectSql<T>(TableClause tableClause, int top = 0, bool distinct = false)
+		private static string GetSelectSql<T>(FromClause fromClause, int top = 0, bool distinct = false)
 		{
 			Type type = GetType(typeof(T));
 			var builder = new StringBuilder();
-			BuildTableClause(tableClause, type, null, builder, top, distinct);
+			BuildFromClause(fromClause, type, null, builder, top, distinct);
 			return builder.ToString();
 		}
 
-		private static string BuildSelectAllSql(TableClause tableClause, Type selectedType)
+		private static string BuildSelectAllSql(FromClause fromClause, Type selectedType)
 		{
-			if (tableClause.EntityType != selectedType)
+			if (fromClause.EntityType != selectedType)
 			{
 				throw new Exception("T in From<T> and SelectAll<T> must match");
 			}
 
-			string tableName = GetTableName(tableClause.EntityType);
+			string tableName = GetTableName(fromClause.EntityType);
 			return $"SELECT * FROM {tableName} ";
 		}
 
@@ -510,8 +510,8 @@ namespace Jaunty
 		{
 			switch (clause)
 			{
-				case TableClause tableClause:
-					BuildTableClause(tableClause, selectedType, selectedTypeAlias, builder);
+				case FromClause fromClause:
+					BuildFromClause(fromClause, selectedType, selectedTypeAlias, builder);
 					break;
 				case JoinOnClause joinOnClause:
 					BuildJoinOnClause(joinOnClause, selectedType, selectedTypeAlias, builder);
@@ -528,12 +528,12 @@ namespace Jaunty
 			}
 		}
 
-		private static void BuildTableClause(TableClause tableClause, Type selectedType, string selectedTypeAlias, StringBuilder builder, int top = 0, bool distinct = false)
+		private static void BuildFromClause(FromClause fromClause, Type selectedType, string selectedTypeAlias, StringBuilder builder, int top = 0, bool distinct = false)
 		{
-			string tableName = GetTableName(tableClause.EntityType);
+			string tableName = GetTableName(fromClause.EntityType);
 			string columns = "{{columns}}";
 
-			if (tableClause.EntityType == selectedType)
+			if (fromClause.EntityType == selectedType)
 			{
 				columns = GetFormattedColumns(selectedType, selectedTypeAlias);
 			}
@@ -549,10 +549,10 @@ namespace Jaunty
 		{
 			BuildSelectSql(joinClause.PreviousClause, selectedType, selectedTypeAlias, builder);
 
-			if (joinClause.PreviousClause is TableClause tableClause
-				&& !GetTableName(tableClause.EntityType).Equals(tableClause.Alias))
+			if (joinClause.PreviousClause is FromClause fromClause
+				&& !GetTableName(fromClause.EntityType).Equals(fromClause.Alias))
 			{
-				builder.Append($"{tableClause.Alias} ");
+				builder.Append($"{fromClause.Alias} ");
 			}
 
 			if (joinClause.EntityType == selectedType)
