@@ -237,31 +237,116 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			Assert.True(products[0].ProductId > 0);
 		}
 
-		//[Fact]
-		//public void SelectDistinctTopByFluent_Products_ReturnsAllProducts()
-		//{
-		//	var guid = Guid.NewGuid();
-		//	string sql = null;
+		[Fact]
+		public void SelectDistinctTopByFluent_Products_ReturnsAllProducts()
+		{
+			var guid = Guid.NewGuid();
+			string sql = null;
 
-		//	Jaunty.OnSelecting += (sender, args) =>
-		//	{
-		//		if (((Guid)sender).Equals(guid))
-		//		{
-		//			sql = args.Sql;
-		//		}
-		//	};
+			Jaunty.OnSelecting += (sender, args) =>
+			{
+				if (((Guid)sender).Equals(guid))
+				{
+					sql = args.Sql;
+				}
+			};
 
-		//	var products = northwind.Connection.From<Product>()
-		//									   .Top(10)
-		//									   .SelectDistinct<Product>(token: guid).ToList();
+			var products = northwind.Connection.Top(10)
+											   .From<Product>()
+											   .SelectDistinct<Product>(token: guid).ToList();
 
-		//	Assert.Equal("SELECT DISTINCT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
-		//					"UnitsOnOrder, ReorderLevel, Discontinued " +
-		//				 "FROM Products ", sql);
+			Assert.Equal("SELECT DISTINCT TOP 10 ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
+							"UnitsOnOrder, ReorderLevel, Discontinued " +
+						 "FROM Products;", sql);
 
-		//	Assert.NotEmpty(products);
-		//	Assert.True(products[0].ProductId > 0);
-		//}
+			Assert.NotEmpty(products);
+			Assert.True(products[0].ProductId > 0);
+		}
+
+		[Fact]
+		public void SelectWithLimitByFluent_Products_ReturnsAllProducts()
+		{
+			var guid = Guid.NewGuid();
+			string sql = null;
+
+			Jaunty.OnSelecting += (sender, args) =>
+			{
+				if (((Guid)sender).Equals(guid))
+				{
+					sql = args.Sql;
+				}
+			};
+
+			var products = northwind.Connection.From<Product>()
+											   .Limit(15)
+											   .Select<Product>(token: guid).ToList();
+
+			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
+							"UnitsOnOrder, ReorderLevel, Discontinued " +
+						 "FROM Products " +
+						 "LIMIT 15;", sql);
+
+			Assert.NotEmpty(products);
+			Assert.True(products[0].ProductId > 0);
+		}
+
+		[Fact]
+		public void SelectWhereWithLimitByFluent_Products_ReturnsAllProducts()
+		{
+			var guid = Guid.NewGuid();
+			string sql = null;
+
+			Jaunty.OnSelecting += (sender, args) =>
+			{
+				if (((Guid)sender).Equals(guid))
+				{
+					sql = args.Sql;
+				}
+			};
+
+			var products = northwind.Connection.From<Product>()
+											   .Where("CategoryId", 2)
+											   .Limit(5)
+											   .Select<Product>(token: guid).ToList();
+
+			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
+							"UnitsOnOrder, ReorderLevel, Discontinued " +
+						 "FROM Products " +
+						 "WHERE CategoryId = @CategoryId " +
+						 "LIMIT 5;", sql);
+
+			Assert.NotEmpty(products);
+			Assert.True(products[0].ProductId > 0);
+		}
+
+		[Fact]
+		public void SelectOrderByWithLimitByFluent_Products_ReturnsAllProducts()
+		{
+			var guid = Guid.NewGuid();
+			string sql = null;
+
+			Jaunty.OnSelecting += (sender, args) =>
+			{
+				if (((Guid)sender).Equals(guid))
+				{
+					sql = args.Sql;
+				}
+			};
+
+			var products = northwind.Connection.From<Product>()
+											   .OrderBy("ProductName")
+											   .Limit(5)
+											   .Select<Product>(token: guid).ToList();
+
+			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
+							"UnitsOnOrder, ReorderLevel, Discontinued " +
+						 "FROM Products " +
+						 "ORDER BY ProductName " +
+						 "LIMIT 5;", sql);
+
+			Assert.NotEmpty(products);
+			Assert.True(products[0].ProductId > 0);
+		}
 
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAllProductsOrderedByProductId()

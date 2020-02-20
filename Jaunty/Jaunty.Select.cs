@@ -146,9 +146,9 @@ namespace Jaunty
 		public static IEnumerable<T> Select<T>(this JoinOnClause joinOn, object token = null, IDbTransaction transaction = null)
 		{
 			string sql = ExtractSql<T>(joinOn);
-			var eventArgs = new SqlEventArgs { Sql = sql.ToString() };
+			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return joinOn.Connection.Query<T>(sql.ToString(), transaction: transaction);
+			return joinOn.Connection.Query<T>(sql, transaction: transaction);
 		}
 
 		/// <summary>
@@ -179,9 +179,9 @@ namespace Jaunty
 		public static IEnumerable<T> Select<T>(this GroupByClause groupByClause, string selectClause, object token = null, IDbTransaction transaction = null)
 		{
 			string sql = ExtractSql<T>(groupByClause, selectClause);
-			var eventArgs = new SqlEventArgs { Sql = sql.ToString() };
+			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return groupByClause.Connection.Query<T>(sql.ToString(), null, transaction);
+			return groupByClause.Connection.Query<T>(sql, null, transaction);
 		}
 
 		/// <summary>
@@ -195,26 +195,17 @@ namespace Jaunty
 		public static IEnumerable<T> Select<T>(this OrderByClause orderByClause, object token = null, IDbTransaction transaction = null)
 		{
 			string sql = ExtractSql<T>(orderByClause);
-			var eventArgs = new SqlEventArgs { Sql = sql.ToString() };
+			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return orderByClause.Connection.Query<T>(sql.ToString(), transaction: transaction);
-		}
-
-		public static IEnumerable<T> Select<T>(this TopClause topClause, object token = null, IDbTransaction transaction = null)
-		{
-			var sql = new StringBuilder();
-			//BuildLimit(topClause, GetType(typeof(T)), sql);
-			var eventArgs = new SqlEventArgs { Sql = sql.ToString() };
-			OnSelecting?.Invoke(token, eventArgs);
-			return topClause.Connection.Query<T>(sql.ToString(), transaction: transaction);
+			return orderByClause.Connection.Query<T>(sql, transaction: transaction);
 		}
 
 		public static IEnumerable<T> Select<T>(this LimitClause limitClause, object token = null, IDbTransaction transaction = null)
 		{
 			var sql = ExtractSql<T>(limitClause);
-			var eventArgs = new SqlEventArgs { Sql = sql.ToString() };
+			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return limitClause.Connection.Query<T>(sql.ToString(), transaction: transaction);
+			return limitClause.Connection.Query<T>(sql, transaction: transaction);
 		}
 
 		// Todo: Complete
@@ -222,15 +213,10 @@ namespace Jaunty
 		//{
 		//	var sql = new StringBuilder();
 		//	BuildHaving(havingClause, GetType(typeof(T)), clause, sql);
-		//	var eventArgs = new SqlEventArgs { Sql = sql.ToString() };
+		//	var eventArgs = new SqlEventArgs { Sql = sql };
 		//	OnSelecting?.Invoke(token, eventArgs);
-		//	return havingClause.Connection.Query<T>(sql.ToString(), null, transaction);
+		//	return havingClause.Connection.Query<T>(sql, null, transaction);
 		//}
-
-		public static LimitClause Limit(this FromClause fromClause, int limit)
-		{
-			return new LimitClause(fromClause, limit);
-		}
 
 		public static TopClause Top(this IDbConnection connection, int top)
 		{
@@ -293,6 +279,26 @@ namespace Jaunty
 			var orderBy = new OrderByClause(clause);
 			orderBy.Add(orderByColumn, sortOrder);
 			return orderBy;
+		}
+
+		public static LimitClause Limit(this FromClause fromClause, int limit)
+		{
+			return new LimitClause(fromClause, limit);
+		}
+
+		public static LimitClause Limit(this ConditionalClause conditionalClause, int limit)
+		{
+			return new LimitClause(conditionalClause, limit);
+		}
+
+		public static LimitClause Limit(this OrderByClause orderByClause, int limit)
+		{
+			return new LimitClause(orderByClause, limit);
+		}
+
+		public static OffsetClause Offset(this LimitClause limitClause, int offset)
+		{
+			return new OffsetClause(limitClause, offset);
 		}
 
 		public static GroupByClause GroupBy(this FromClause fromClause, params string[] groupByColumns)
@@ -523,7 +529,7 @@ namespace Jaunty
 			else
 			{
 				builder.PrependBefore(" FROM", " " + selectClause);
-				builder.Prepend("SELECT" + (distinct ? "DISTINCT" : ""));
+				builder.Prepend("SELECT" + (distinct ? " DISTINCT" : ""));
 			}
 		}
 

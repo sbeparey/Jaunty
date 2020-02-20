@@ -424,5 +424,17 @@ namespace Jaunty
 
 			internal override string Sql => $"TOP {Top}";
 		}
+
+		public class OffsetClause : Clause
+		{
+			public OffsetClause(Clause clause, int offset) : base(clause)
+			{
+				Offset = offset;
+			}
+
+			internal int Offset { get; private set; }
+
+			internal override string Sql => $"OFFSET {Offset}";
+		}
 	}
 }
