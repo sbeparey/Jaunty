@@ -163,7 +163,6 @@ namespace Jaunty
 		{
 			var sql = ExtractSql<T>(conditionalClause);
 			var parameters = conditionalClause.GetParameters();
-			//BuildConditionClause(conditionalClause, type, sql);
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(token, eventArgs);
 			return conditionalClause.Connection.Query<T>(sql, parameters, transaction);
@@ -212,8 +211,7 @@ namespace Jaunty
 
 		public static IEnumerable<T> Select<T>(this LimitClause limitClause, object token = null, IDbTransaction transaction = null)
 		{
-			var sql = new StringBuilder();
-			BuildLimit(limitClause, GetType(typeof(T)), sql);
+			var sql = ExtractSql<T>(limitClause);
 			var eventArgs = new SqlEventArgs { Sql = sql.ToString() };
 			OnSelecting?.Invoke(token, eventArgs);
 			return limitClause.Connection.Query<T>(sql.ToString(), transaction: transaction);
@@ -417,7 +415,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this FromClause fromClause, object token = null, IDbTransaction transaction = null)
 		{
-			string sql = GetSelectSql<T>(fromClause);
+			string sql = ExtractSql<T>(fromClause);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
 			return await fromClause.Connection.QueryAsync<T>(sql, null, transaction);
@@ -433,12 +431,10 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this JoinOnClause joinOn, object token = null, IDbTransaction transaction = null)
 		{
-			Type selectedType = GetType(typeof(T));
-			var sql = new StringBuilder();
-			//BuildJoinOnClause(joinOn, selectedType, null, sql);
-			var eventArgs = new SqlEventArgs { Sql = sql.ToString() };
+			var sql = ExtractSql<T>(joinOn);
+			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return await joinOn.Connection.QueryAsync<T>(sql.ToString(), transaction: transaction);
+			return await joinOn.Connection.QueryAsync<T>(sql, transaction: transaction);
 		}
 
 		/// <summary>
@@ -451,13 +447,11 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this ConditionalClause conditionalClause, object token = null, IDbTransaction transaction = null)
 		{
-			Type type = GetType(typeof(T));
-			var sql = new StringBuilder();
+			var sql = ExtractSql<T>(conditionalClause);
 			var parameters = conditionalClause.GetParameters();
-			BuildConditionClause(conditionalClause, type, sql);
-			var eventArgs = new SqlEventArgs { Sql = sql.ToString(), Parameters = parameters };
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(token, eventArgs);
-			return await conditionalClause.Connection.QueryAsync<T>(sql.ToString(), parameters, transaction);
+			return await conditionalClause.Connection.QueryAsync<T>(sql, parameters, transaction);
 		}
 
 		/// <summary>
@@ -470,11 +464,10 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this GroupByClause groupByClause, string clause, object token = null, IDbTransaction transaction = null)
 		{
-			var sql = new StringBuilder();
-			BuildGroupBy(groupByClause, GetType(typeof(T)), clause, sql);
-			var eventArgs = new SqlEventArgs { Sql = sql.ToString() };
+			var sql = ExtractSql<T>(groupByClause);
+			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return await groupByClause.Connection.QueryAsync<T>(sql.ToString(), null, transaction);
+			return await groupByClause.Connection.QueryAsync<T>(sql, null, transaction);
 		}
 
 		/// <summary>
@@ -487,11 +480,10 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this OrderByClause orderByClause, object token = null, IDbTransaction transaction = null)
 		{
-			var sql = new StringBuilder();
-			BuildOrderBy(orderByClause, GetType(typeof(T)), sql);
-			var eventArgs = new SqlEventArgs { Sql = sql.ToString() };
+			var sql = ExtractSql<T>(orderByClause);
+			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return await orderByClause.Connection.QueryAsync<T>(sql.ToString(), transaction: transaction);
+			return await orderByClause.Connection.QueryAsync<T>(sql, transaction: transaction);
 		}
 
 		#endregion
@@ -515,8 +507,15 @@ namespace Jaunty
 				clause = clause.PreviousClause;
 			}
 
+			BuildSelect(builder, selectedType, selectClause, selectedAlias, distinct, hasJoin, hasTop);
+			builder.Append(";");
+			return builder.ToString();
+		}
+
+		private static void BuildSelect(StringBuilder builder, Type selectedType, string selectClause, string selectedAlias, bool distinct, bool hasJoin, bool hasTop)
+		{
 			selectClause ??= GetFormattedColumns(selectedType, selectedAlias ?? (hasJoin ? GetTableName(selectedType) : null));
-			
+
 			if (!hasTop)
 			{
 				builder.Prepend("SELECT " + (distinct ? "DISTINCT " : "") + selectClause);
@@ -526,9 +525,6 @@ namespace Jaunty
 				builder.PrependBefore(" FROM", " " + selectClause);
 				builder.Prepend("SELECT" + (distinct ? "DISTINCT" : ""));
 			}
-
-			builder.Append(";");
-			return builder.ToString();
 		}
 
 		private static string GetSelectedAlias(Clause clause, Type selectedType)
@@ -544,168 +540,6 @@ namespace Jaunty
 			}
 
 			return null;
-		}
-
-		private static string GetSelectSql<T>(FromClause fromClause, int top = 0, bool distinct = false)
-		{
-			Type type = GetType(typeof(T));
-			var builder = new StringBuilder();
-			//BuildFromClause(fromClause, type, null, builder, top, distinct);
-			return builder.ToString();
-		}
-
-		//private static string BuildSelectAllSql(FromClause fromClause, Type selectedType)
-		//{
-		//	if (fromClause.EntityType != selectedType)
-		//	{
-		//		throw new Exception("T in From<T> and SelectAll<T> must match");
-		//	}
-
-		//	string tableName = GetTableName(fromClause.EntityType);
-		//	return $"SELECT * FROM {tableName} ";
-		//}
-
-		private static void BuildSql(Clause clause, Type selectedType, string selectedTypeAlias, StringBuilder builder)
-		{
-			switch (clause)
-			{
-				case FromClause fromClause:
-					//BuildFromClause(fromClause, selectedType, selectedTypeAlias, builder);
-					break;
-				case JoinOnClause joinOnClause:
-					//BuildJoinOnClause(joinOnClause, selectedType, selectedTypeAlias, builder);
-					break;
-				case ConditionalClause conditionClause:
-					BuildSql(conditionClause, selectedType, selectedTypeAlias, builder);
-					break;
-				case GroupByClause groupByClause:
-					BuildGroupBy(groupByClause, selectedType, selectedTypeAlias, builder);
-					break;
-				case HavingClause havingClause:
-					BuildHaving(havingClause, selectedType, selectedTypeAlias, builder);
-					break;
-				case OrderByClause orderBy:
-					BuildOrderBy(orderBy, selectedType, builder);
-					break;
-				case LimitClause limitClause:
-					BuildLimit(limitClause, selectedType, builder);
-					break;
-			}
-		}
-
-		//private static void BuildFromClause(FromClause fromClause, Type selectedType, string selectedTypeAlias, StringBuilder builder, int top = 0, bool distinct = false)
-		//{
-		//	string tableName = GetTableName(fromClause.EntityType);
-		//	string columns = "{{columns}}";
-
-		//	if (fromClause.EntityType == selectedType)
-		//	{
-		//		columns = GetFormattedColumns(selectedType, selectedTypeAlias);
-		//	}
-
-		//	string select = distinct
-		//					  ? SqlTemplates.SelectDistinct.Replace("{{columns}}", columns, StringComparison.OrdinalIgnoreCase)
-		//					  : SqlTemplates.Select.Replace("{{columns}}", columns, StringComparison.OrdinalIgnoreCase);
-		//	select = select.Replace("{{table}}", tableName, StringComparison.OrdinalIgnoreCase) + " ";
-		//	builder.Append(select);
-		//}
-
-		//private static void BuildJoinClause(JoinClause joinClause, Type selectedType, string selectedTypeAlias, StringBuilder builder)
-		//{
-		//	BuildSql(joinClause.PreviousClause, selectedType, selectedTypeAlias, builder);
-
-		//	if (joinClause.PreviousClause is FromClause fromClause
-		//		&& !GetTableName(fromClause.EntityType).Equals(fromClause.Alias))
-		//	{
-		//		builder.Append($"{fromClause.Alias} ");
-		//	}
-
-		//	if (joinClause.EntityType == selectedType)
-		//	{
-		//		string formattedColumns = GetFormattedColumns(joinClause.EntityType, joinClause.Alias);
-		//		builder.Replace("{{columns}}", formattedColumns);
-		//	}
-
-		//	string tableName = GetTableName(joinClause.EntityType);
-		//	builder.Append($"{joinClause.JoinType.ToSqlString()} {tableName} ");
-
-		//	if (!tableName.Equals(joinClause.Alias))
-		//	{
-		//		builder.Append($"{joinClause.Alias} ");
-		//	}
-		//}
-
-		//private static void BuildJoinOnClause(JoinOnClause joinOn, Type selectedType, string selectTypeAlias, StringBuilder builder)
-		//{
-		//	var join = (JoinClause)joinOn.PreviousClause;
-		//	BuildJoinClause(join, selectedType, selectTypeAlias, builder);
-		//	builder.Append("ON ");
-		//	builder.Append($"{joinOn.Column1} = {joinOn.Column2} ");
-		//}
-
-		private static void BuildConditionClause(ConditionalClause conditionClause, Type selectedType, StringBuilder builder)
-		{
-			BuildSql(conditionClause.PreviousClause, selectedType, null, builder);
-			string where = conditionClause.ToWhereClause();
-			builder.Append($"WHERE {where} ");
-		}
-
-		private static void BuildGroupBy(GroupByClause groupByClause, Type selectedType, string clause, StringBuilder builder)
-		{
-			BuildSql(groupByClause.PreviousClause, null, null, builder);
-
-			// TODO: In the future, do validations to allow only valid columns and sql functions
-			// listed here: https://docs.microsoft.com/en-us/sql/t-sql/functions/aggregate-functions-transact-sql?view=sql-server-2017
-			// for now, just passing the given column names to Select
-			//List<string> columnNames = GetColumnNamesCache(selectedType);
-			//string[] columnsArray = clause.Split(',');
-			//var selectColumns = new List<string>();
-
-			//for (int i = 0; i < columnNames.Count; i++)
-			//{
-			//    for (int j = 0; j < columnsArray.Length; j++)
-			//    {
-			//        if (columnsArray[j].Trim().Equals(columnNames[i], StringComparison.InvariantCultureIgnoreCase))
-			//        {
-			//            selectColumns.Add(columnNames[i]);
-			//        }
-			//    }
-			//}
-
-			//builder.Replace("{{columns}}", string.Join(", ", selectColumns));
-			builder.Replace("{{columns}}", clause ?? "{{columns}}");
-			string groupByColumns = groupByClause.GroupBys.ToClause();
-			builder.Append($"GROUP BY {groupByColumns} ");
-		}
-
-		private static void BuildHaving(HavingClause havingClause, Type selectedType, string clause, StringBuilder builder)
-		{
-			// Todo: Enhance Having
-			BuildSql(havingClause.PreviousClause, null, null, builder);
-			builder.Replace("{{columns}}", clause ?? "{{columns}}");
-			string havings = havingClause.Havings.ToClause();
-			builder.Append($"HAVING {havings} ");
-		}
-
-		private static void BuildOrderBy(OrderByClause orderByClause, Type selectedType, StringBuilder builder)
-		{
-			BuildSql(orderByClause.PreviousClause, selectedType, null, builder);
-			IDictionary<string, SortOrder?> orderBys = orderByClause.OrderBys;
-
-			for (int i = 0; i < orderBys.Count; i++)
-			{
-				KeyValuePair<string, SortOrder?> kvp = orderBys.ElementAt(i);
-				builder.AppendIf(i == 0, "ORDER BY ");
-				builder.Append($"{kvp.Key}");
-				builder.AppendIf(kvp.Value.HasValue, $" {(kvp.Value == SortOrder.Descending ? "DESC" : "ASC")}");
-				builder.Append(i < orderBys.Count - 1 ? ", " : " ");
-			}
-		}
-
-		public static void BuildLimit(LimitClause limitClause, Type selectedType, StringBuilder builder)
-		{
-			BuildSql(limitClause.PreviousClause, selectedType, null, builder);
-			builder.AppendIf(limitClause.Limit > 0, $"LIMIT {limitClause.Limit} ");
 		}
 
 		private static string GetFormattedColumns(Type type, string alias)
