@@ -52,6 +52,11 @@ namespace Jaunty
 			}
 		}
 
+		//public interface ISqlClause
+		//{
+		//	string Sql { get; }
+		//}
+
 		public abstract class Clause
 		{
 			protected Clause(IDbConnection connection)
@@ -66,6 +71,8 @@ namespace Jaunty
 
 			internal IDbConnection Connection { get; }
 			internal Clause PreviousClause { get; set; }
+
+			internal abstract string Sql { get; }
 		}
 
 		public class FromClause : Clause
@@ -79,17 +86,22 @@ namespace Jaunty
 				}
 
 				EntityType = entityType;
-				Alias = alias ?? GetTableName(entityType);
+				Alias = alias;
 			}
 
-			public FromClause(Clause clause, Type entityType, string alias = null) :
-				this(clause.Connection, entityType, alias)
+			public FromClause(Clause clause, Type entityType, string alias = null)
+				: this(clause?.Connection, entityType, alias)
 			{
 				PreviousClause = clause ?? throw new ArgumentNullException(nameof(clause));
 			}
 
 			internal Type EntityType { get; }
+			internal string Name => GetTableName(EntityType);
 			internal string Alias { get; }
+
+			internal override string Sql => !string.IsNullOrWhiteSpace(Alias)
+														? $"FROM {Name} {Alias}"
+														: $"FROM {Name}";
 		}
 
 		public class JoinClause : Clause
@@ -97,15 +109,22 @@ namespace Jaunty
 			public JoinClause(Clause clause, Type entityType, string alias = null, JoinType joinType = JoinType.InnerJoin)
 				: base(clause)
 			{
-				EntityType = entityType ?? throw new ArgumentNullException(nameof(entityType));
-				PreviousClause = clause;
-				Alias = alias ?? GetTableName(entityType);
+				if (entityType is null)
+					throw new ArgumentNullException(nameof(entityType));
+
+				EntityType = entityType;
+				Alias = alias;
 				JoinType = joinType;
 			}
 
 			internal Type EntityType { get; }
+			internal string Name => GetTableName(EntityType);
 			internal string Alias { get; }
 			internal JoinType JoinType { get; }
+
+			internal override string Sql => !string.IsNullOrEmpty(Alias)
+														? $"{JoinType.ToSqlString()} {Name} {Alias}"
+														: $"{JoinType.ToSqlString()} {Name}";
 		}
 
 		public class JoinOnClause : Clause
@@ -128,6 +147,8 @@ namespace Jaunty
 
 			internal string Column1 { get; }
 			internal string Column2 { get; }
+
+			internal override string Sql => $"ON {Column1} = {Column2}";
 		}
 
 		public class ConditionalClause : Clause
@@ -215,6 +236,7 @@ namespace Jaunty
 			internal string ToWhereClause()
 			{
 				var sb = new StringBuilder();
+				sb.Append("WHERE ");
 
 				for (int i = 0; i < whereClauses.Count; i++)
 				{
@@ -228,6 +250,8 @@ namespace Jaunty
 
 				return sb.ToString();
 			}
+
+			internal override string Sql => ToWhereClause();
 		}
 
 		public class PartialConditionalClause : Clause
@@ -254,6 +278,8 @@ namespace Jaunty
 
 				Column = column;
 			}
+
+			internal override string Sql => "";
 		}
 
 		public class AndClause : Clause
@@ -261,6 +287,8 @@ namespace Jaunty
 			public AndClause(Clause clause) : base(clause)
 			{
 			}
+
+			internal override string Sql => "AND";
 		}
 
 		public class OrClause : Clause
@@ -268,6 +296,8 @@ namespace Jaunty
 			public OrClause(Clause clause) : base(clause)
 			{
 			}
+
+			internal override string Sql => "OR";
 		}
 
 		public class SetClause : Clause
@@ -297,6 +327,8 @@ namespace Jaunty
 			{
 				return Sets.ToSetClause();
 			}
+
+			internal override string Sql => "";
 		}
 
 		public class GroupByClause : Clause
@@ -311,6 +343,8 @@ namespace Jaunty
 			{
 				GroupBys = GroupBys ?? new List<string>(columns);
 			}
+
+			internal override string Sql => $"GROUP BY {string.Join(", ", GroupBys)}";
 		}
 
 		public class HavingClause : Clause
@@ -326,6 +360,8 @@ namespace Jaunty
 			{
 				// todo 
 			}
+
+			internal override string Sql => "";
 		}
 
 		public class OrderByClause : Clause
@@ -344,6 +380,25 @@ namespace Jaunty
 					OrderBys.Add(column, sortOrder);
 				}
 			}
+
+			internal override string Sql
+			{
+				get
+				{
+					var sb = new StringBuilder();
+
+					for (int i = 0; i < OrderBys.Count; i++)
+					{
+						KeyValuePair<string, SortOrder?> kvp = OrderBys.ElementAt(i);
+						sb.AppendIf(i == 0, "ORDER BY ");
+						sb.Append($"{kvp.Key}");
+						sb.AppendIf(kvp.Value.HasValue, $" {(kvp.Value == SortOrder.Descending ? "DESC" : "ASC")}");
+						sb.AppendIf(i < OrderBys.Count - 1, ", ");
+					}
+
+					return sb.ToString();
+				}
+			}
 		}
 
 		public class LimitClause : Clause
@@ -354,6 +409,8 @@ namespace Jaunty
 			}
 
 			internal int Limit { get; private set; }
+
+			internal override string Sql => $"LIMIT {Limit}";
 		}
 
 		public class TopClause : Clause
@@ -364,6 +421,8 @@ namespace Jaunty
 			}
 
 			internal int Top { get; private set; }
+
+			internal override string Sql => $"TOP {Top}";
 		}
 	}
 }

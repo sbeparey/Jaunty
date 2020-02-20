@@ -18,6 +18,16 @@ namespace Jaunty
 			return builder.AppendIf(!string.IsNullOrWhiteSpace(candidate), text);
 		}
 
+		internal static StringBuilder Prepend(this StringBuilder builder, string text)
+		{
+			return builder.Insert(0, text);
+		}
+
+		internal static StringBuilder PrependBefore(this StringBuilder builder, string before, string text)
+		{
+			return builder.Insert(builder.ToString().IndexOf(before), text);
+		}
+
 		internal static List<string> Prepend(this IList<string> list, string prefix)
 		{
 			var modifiedList = new List<string>();
