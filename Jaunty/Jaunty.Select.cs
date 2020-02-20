@@ -520,7 +520,7 @@ namespace Jaunty
 
 		private static void BuildSelect(StringBuilder builder, Type selectedType, string selectClause, string selectedAlias, bool distinct, bool hasJoin, bool hasTop)
 		{
-			selectClause ??= GetFormattedColumns(selectedType, selectedAlias ?? (hasJoin ? GetTableName(selectedType) : null));
+			selectClause ??= GetFormattedColumns(selectedType, selectedAlias ?? (hasJoin ? GetTypeName(selectedType) : null));
 
 			if (!hasTop)
 			{
@@ -571,7 +571,7 @@ namespace Jaunty
 			}
 
 			string sql = SqlTemplates.Select.Replace("{{columns}}", GetColumnsCache(type).Keys.ToList().ToClause(), StringComparison.OrdinalIgnoreCase)
-											.Replace("{{table}}", GetTableName(type), StringComparison.OrdinalIgnoreCase);
+											.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase);
 			sql += ";";
 			Jaunty.getAllQueriesCache[type.TypeHandle] = sql;
 			return sql;
@@ -600,7 +600,7 @@ namespace Jaunty
 			}
 
 			string sqlWithoutWhere = SqlTemplates.SelectWhere.Trim().Replace("{{columns}}", GetColumnsCache(type).Keys.ToList().ToClause())
-																		.Replace("{{table}}", GetTableName(type));
+																		.Replace("{{table}}", GetTypeName(type));
 			getQueriesCache[type.TypeHandle] = sqlWithoutWhere;
 			return sqlWithoutWhere.Replace("{{where}}", keyColumnsList.ToWhereClause());
 		}
@@ -617,7 +617,7 @@ namespace Jaunty
 			}
 
 			string sqlWithoutWhere = SqlTemplates.SelectWhere.Trim().Replace("{{columns}}", GetColumnsCache(type).Keys.ToList().ToClause())
-																		.Replace("{{table}}", GetTableName(type));
+																		.Replace("{{table}}", GetTypeName(type));
 			getQueriesCache[type.TypeHandle] = sqlWithoutWhere;
 			return sqlWithoutWhere.Replace("{{where}}", whereClause.ToString());
 		}
@@ -628,7 +628,7 @@ namespace Jaunty
 			Type type = GetType(typeof(T));
 			var columnsList = GetColumnsCache(type).Keys.ToList();
 			string sqlWithoutWhere = SqlTemplates.SelectWhere.Trim().Replace("{{columns}}", columnsList.ToClause())
-																		.Replace("{{table}}", GetTableName(type));
+																		.Replace("{{table}}", GetTypeName(type));
 			getQueriesCache[type.TypeHandle] = sqlWithoutWhere;
 			return sqlWithoutWhere.Replace("{{where}}", parameters.ToWhereClause());
 		}

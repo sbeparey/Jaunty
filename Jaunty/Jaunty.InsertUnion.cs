@@ -76,7 +76,7 @@ namespace Jaunty
 			var keys = new List<string>(GetKeysCache(type).Keys);
 			var columns = new List<string>(GetColumnsCache(type).Keys);
 			columns.Reduce(keys);
-			string sql = SqlTemplates.InsertByUnion.Trim().Replace("{{table}}", GetTableName(type))
+			string sql = SqlTemplates.InsertByUnion.Trim().Replace("{{table}}", GetTypeName(type))
 														  .Replace("{{columns}}", columns.ToClause());
 
 			// Good time to cache

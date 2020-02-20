@@ -172,7 +172,7 @@ namespace Jaunty
 		private static readonly ConcurrentDictionary<RuntimeTypeHandle, string> _tableNamesCache =
 			new ConcurrentDictionary<RuntimeTypeHandle, string>();
 
-		private static Type GetType(Type type)
+		internal static Type GetType(Type type)
 		{
 			if (type.IsArray)
 			{
@@ -202,7 +202,7 @@ namespace Jaunty
 			return type;
 		}
 
-		private static string GetTableName(Type type)
+		internal static string GetTypeName(Type type)
 		{
 			if (_tableNamesCache.TryGetValue(type.TypeHandle, out string tableNamesCache))
 			{
@@ -239,7 +239,7 @@ namespace Jaunty
 			return tableName;
 		}
 
-		private static List<PropertyInfo> GetPropertiesCache(Type type)
+		internal static List<PropertyInfo> GetPropertiesCache(Type type)
 		{
 			if (_propertiesCache.TryGetValue(type.TypeHandle, out IEnumerable<PropertyInfo> propertiesCache))
 			{

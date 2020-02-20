@@ -172,7 +172,7 @@ namespace Jaunty
 		private static string BuildInsertSql(Type type, IList<string> columns, string keyColumnName, bool returnId)
 		{
 			List<string> paramsList = columns.ForEach(x => ParameterFormatter?.Invoke(x) ?? $"@{x}");
-			var sql = SqlTemplates.Insert.Trim().Replace("{{table}}", GetTableName(type))
+			var sql = SqlTemplates.Insert.Trim().Replace("{{table}}", GetTypeName(type))
 												.Replace("{{columns}}", columns.ToClause())
 												.Replace("{{parameters}}", paramsList.ToClause());
 

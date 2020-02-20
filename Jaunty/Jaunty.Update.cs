@@ -161,7 +161,7 @@ namespace Jaunty
 			columnsList?.Reduce(keyColumnsList);
 			string setClause = conditionClause is null ? columnsList.ToSetClause() : conditionClause.GetSetClause();
 			string whereClause = conditionClause is null ? keyColumnsList.ToWhereClause() : conditionClause.ToWhereClause();
-			return SqlTemplates.UpdateWhere.Trim().Replace("{{table}}", GetTableName(type))
+			return SqlTemplates.UpdateWhere.Trim().Replace("{{table}}", GetTypeName(type))
 													  .Replace("{{columns}}", setClause)
 													  .Replace("{{where}}", whereClause);
 		}
