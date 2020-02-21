@@ -428,6 +428,32 @@ namespace Jaunty
 
 		internal int Offset { get; private set; }
 
-		internal override string Sql => $"OFFSET {Offset}";
+		internal override string Sql => SqlDialect == Dialects.SqlServer
+											? $"OFFSET {Offset} ROWS"
+											: $"OFFSET {Offset}";
+	}
+
+	public class FetchFirst : Clause
+	{
+		public FetchFirst(Clause clause, int rowCount) : base(clause)
+		{
+			RowCount = rowCount;
+		}
+
+		internal int RowCount { get; private set; }
+
+		internal override string Sql => $"FETCH FIRST {RowCount} ROWS ONLY";
+	}
+
+	public class FetchNext : Clause
+	{
+		public FetchNext(Clause clause, int rowCount) : base(clause)
+		{
+			RowCount = rowCount;
+		}
+
+		internal int RowCount { get; private set; }
+
+		internal override string Sql => $"FETCH NEXT {RowCount} ROWS ONLY";
 	}
 }

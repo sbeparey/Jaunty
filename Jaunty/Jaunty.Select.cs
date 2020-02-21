@@ -208,6 +208,22 @@ namespace Jaunty
 			return limitClause.Connection.Query<T>(sql, transaction: transaction);
 		}
 
+		public static IEnumerable<T> Select<T>(this FetchFirst fetchFirst, object token = null, IDbTransaction transaction = null)
+		{
+			var sql = ExtractSql<T>(fetchFirst);
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(token, eventArgs);
+			return fetchFirst.Connection.Query<T>(sql, transaction: transaction);
+		}
+
+		public static IEnumerable<T> Select<T>(this FetchNext fetchNext, object token = null, IDbTransaction transaction = null)
+		{
+			var sql = ExtractSql<T>(fetchNext);
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(token, eventArgs);
+			return fetchNext.Connection.Query<T>(sql, transaction: transaction);
+		}
+
 		// Todo: Complete
 		//public static IEnumerable<T> Select<T>(this HavingClause havingClause, string clause, object token = null, IDbTransaction transaction = null)
 		//{
@@ -299,6 +315,21 @@ namespace Jaunty
 		public static OffsetClause Offset(this LimitClause limitClause, int offset)
 		{
 			return new OffsetClause(limitClause, offset);
+		}
+
+		public static OffsetClause Offset(this OrderByClause orderByClause, int offset)
+		{
+			return new OffsetClause(orderByClause, offset);
+		}
+
+		public static FetchFirst FetchFirst(this OffsetClause offsetClause, int rowCount)
+		{
+			return new FetchFirst(offsetClause, rowCount);
+		}
+
+		public static FetchNext FetchNext(this OffsetClause offsetClause, int rowCount)
+		{
+			return new FetchNext(offsetClause, rowCount);
 		}
 
 		public static GroupByClause GroupBy(this FromClause fromClause, params string[] groupByColumns)

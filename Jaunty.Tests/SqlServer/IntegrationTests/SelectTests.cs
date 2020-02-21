@@ -16,6 +16,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 		public SelectTests(Northwind northwind)
 		{
+			Jaunty.SqlDialect = Jaunty.Dialects.SqlServer;
 			this.northwind = northwind;
 			IPluralize pluralize = new Pluralizer();
 			Jaunty.TableNameMapper += type => type == typeof(OrderDetail) ? "\"Order Details\"" : pluralize.Pluralize(type.Name);
@@ -335,17 +336,20 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			var products = northwind.Connection.From<Product>()
 											   .OrderBy("ProductName")
-											   .Limit(5)
+											   .Offset(0)
+											   .FetchNext(10)
 											   .Select<Product>(token: guid).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
 						 "FROM Products " +
 						 "ORDER BY ProductName " +
-						 "LIMIT 5;", sql);
+						 "OFFSET 0 ROWS " +
+						 "FETCH NEXT 10 ROWS ONLY;", sql);
 
 			Assert.NotEmpty(products);
 			Assert.True(products[0].ProductId > 0);
+			Assert.True(products.Count() == 10);
 		}
 
 		[Fact]
