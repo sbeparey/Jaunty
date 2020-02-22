@@ -540,10 +540,13 @@ namespace Jaunty
 				hasJoin = hasJoin || clause is JoinClause;
 				hasTop = hasTop || clause is TopClause;
 				selectedAlias ??= GetSelectedAlias(clause, selectedType);
-				builder.Prepend(" " + clause.Sql);
+
+				builder.PrependIf(builder.Length > 0, clause.Sql + " ");
+				builder.AppendIf(builder.Length == 0, clause.Sql);
+
 				clause = clause.PreviousClause;
 			}
-
+			
 			BuildSelect(builder, selectedType, selectClause, selectedAlias, distinct, hasJoin, hasTop);
 			builder.Append(";");
 			return builder.ToString();
@@ -555,12 +558,12 @@ namespace Jaunty
 
 			if (!hasTop)
 			{
-				builder.Prepend("SELECT " + (distinct ? "DISTINCT " : "") + selectClause);
+				builder.Prepend("SELECT " + (distinct ? "DISTINCT " : "") + selectClause + " ");
 			}
 			else
 			{
-				builder.PrependBefore(" FROM", " " + selectClause);
-				builder.Prepend("SELECT" + (distinct ? " DISTINCT" : ""));
+				builder.PrependBefore("FROM", selectClause + " ");
+				builder.Prepend("SELECT " + (distinct ? "DISTINCT " : ""));
 			}
 		}
 

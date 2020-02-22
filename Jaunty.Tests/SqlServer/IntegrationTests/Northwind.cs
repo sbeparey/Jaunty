@@ -31,7 +31,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 		public void StageDatabase()
 		{
-			string northwindDir = Path.Combine(Directory.GetCurrentDirectory(), @"..\..\..\..\..\..\", @"databases\src\Northwind\SqlServer");
+			string northwindDir = Path.Combine(Directory.GetCurrentDirectory(), @"..\..\..\..\..\", @"databases\src\Northwind\SqlServer");
 
 			string tablesDir = Path.Combine(northwindDir, "Tables");
 			ExecuteSql(tablesDir);

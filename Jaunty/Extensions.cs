@@ -23,6 +23,11 @@ namespace Jaunty
 			return builder.Insert(0, text);
 		}
 
+		internal static StringBuilder PrependIf(this StringBuilder builder, bool condition, string text)
+		{
+			return condition ? builder?.Prepend(text) : builder;
+		}
+
 		internal static StringBuilder PrependBefore(this StringBuilder builder, string before, string text)
 		{
 			return builder.Insert(builder.ToString().IndexOf(before), text);
