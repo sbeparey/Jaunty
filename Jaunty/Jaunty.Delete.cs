@@ -72,7 +72,7 @@ namespace Jaunty
 		/// <param name="conditionalClause">The conditional clause.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Return number of rows affected.</returns>
-		public static int Delete<T>(this ConditionalClause conditionalClause, object token = null, IDbTransaction transaction = null)
+		public static int Delete<T>(this Condition conditionalClause, object token = null, IDbTransaction transaction = null)
 		{
 			var parameters = conditionalClause.GetParameters();
 			string sql = BuildDeleteSql<T>(conditionalClause);
@@ -136,7 +136,7 @@ namespace Jaunty
 		/// <param name="conditionalClause">The conditional clause.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Return number of rows affected.</returns>
-		public static async Task<int> DeleteAsync<T>(this ConditionalClause conditionalClause, object token = null, IDbTransaction transaction = null)
+		public static async Task<int> DeleteAsync<T>(this Condition conditionalClause, object token = null, IDbTransaction transaction = null)
 		{
 			var parameters = conditionalClause.GetParameters();
 			string sql = BuildDeleteSql<T>(conditionalClause);
@@ -219,13 +219,13 @@ namespace Jaunty
 													  .Replace("{{where}}", parameters.ToWhereClause());
 		}
 
-		private static string BuildDeleteSql<T>(ConditionalClause conditionalClause = null)
+		private static string BuildDeleteSql<T>(Condition conditionalClause = null)
 		{
 			Type type = GetType(typeof(T));
 			string tableName = GetTypeName(type);
 			string whereClause = conditionalClause is null
 				? GetKeysCache(type).Keys.ToList().ToWhereClause()
-				: conditionalClause.ToWhereClause();
+				: conditionalClause.Sql;
 			return SqlTemplates.DeleteWhere.Trim().Replace("{{table}}", tableName)
 													  .Replace("{{where}}", whereClause);
 		}

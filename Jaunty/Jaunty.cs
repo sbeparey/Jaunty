@@ -339,7 +339,7 @@ namespace Jaunty
 				   || columnName.Equals(type.Name + "_" + "id", StringComparison.CurrentCultureIgnoreCase);
 		}
 
-		private static IDictionary<string, PropertyInfo> GetColumnsCache(Type type)
+		internal static IDictionary<string, PropertyInfo> GetColumnsCache(Type type)
 		{
 			if (_columnsCache.TryGetValue(type.TypeHandle, out IDictionary<string, PropertyInfo> columnsCache))
 			{

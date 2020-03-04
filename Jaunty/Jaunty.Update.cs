@@ -64,7 +64,7 @@ namespace Jaunty
 		/// <param name="conditionalClause"></param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns number of rows affected.</returns>
-		public static int Update<T>(this ConditionalClause conditionalClause, IDbTransaction transaction = null)
+		public static int Update<T>(this Condition conditionalClause, IDbTransaction transaction = null)
 		{
 			IDictionary<string, object> parameters = conditionalClause.GetParameters();
 			string sql = BuildUpdateSql<T>(conditionalClause);
@@ -79,7 +79,7 @@ namespace Jaunty
 		/// <param name="conditionalClause"></param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns number of rows affected.</returns>
-		public static async Task<int> UpdateAsync<T>(this ConditionalClause conditionalClause, IDbTransaction transaction = null)
+		public static async Task<int> UpdateAsync<T>(this Condition conditionalClause, IDbTransaction transaction = null)
 		{
 			IDictionary<string, object> parameters = conditionalClause.GetParameters();
 			string sql = BuildUpdateSql<T>(conditionalClause);
@@ -153,14 +153,14 @@ namespace Jaunty
 			return setClause;
 		}
 
-		private static string BuildUpdateSql<T>(ConditionalClause conditionClause = null)
+		private static string BuildUpdateSql<T>(Condition conditionClause = null)
 		{
 			Type type = GetType(typeof(T));
 			var columnsList = conditionClause is null ? GetColumnsCache(type).Keys.ToList() : null;
 			var keyColumnsList = conditionClause is null ? GetKeysCache(type).Keys.ToList() : null;
 			columnsList?.Reduce(keyColumnsList);
 			string setClause = conditionClause is null ? columnsList.ToSetClause() : conditionClause.GetSetClause();
-			string whereClause = conditionClause is null ? keyColumnsList.ToWhereClause() : conditionClause.ToWhereClause();
+			string whereClause = conditionClause is null ? keyColumnsList.ToWhereClause() : conditionClause.Sql;
 			return SqlTemplates.UpdateWhere.Trim().Replace("{{table}}", GetTypeName(type))
 													  .Replace("{{columns}}", setClause)
 													  .Replace("{{where}}", whereClause);

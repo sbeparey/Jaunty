@@ -107,32 +107,35 @@ namespace Jaunty
 		/// Selects on From 
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table or view.</typeparam>
-		/// <param name="fromClause">From<T></param>
+		/// <param name="from">From<T></param>
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this FromClause fromClause, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this From from, object token = null, IDbTransaction transaction = null)
 		{
-			string sql = ExtractSql<T>(fromClause);
+			if (from is null)
+				throw new ArgumentNullException(nameof(from));
+
+			string sql = ExtractSql<T>(from);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return fromClause.Connection.Query<T>(sql, null, transaction);
+			return from.Connection.Query<T>(sql, null, transaction);
 		}
 
 		/// <summary>
 		/// Selects on From 
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="fromClause">From<T></param>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="from">From<T></param>
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> SelectDistinct<T>(this FromClause fromClause, object token = null, IDbTransaction transaction = null)
+		public static string SelectAsString<T>(this From from)
 		{
-			string sql = ExtractSql<T>(fromClause, distinct: true);
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
-			return fromClause.Connection.Query<T>(sql, null, transaction);
+			if (from is null)
+				throw new ArgumentNullException(nameof(from));
+
+			return ExtractSql<T>(from);
 		}
 
 		/// <summary>
@@ -143,8 +146,11 @@ namespace Jaunty
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this JoinOnClause joinOn, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this JoinOn joinOn, object token = null, IDbTransaction transaction = null)
 		{
+			if (joinOn is null)
+				throw new ArgumentNullException(nameof(joinOn));
+
 			string sql = ExtractSql<T>(joinOn);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
@@ -155,61 +161,76 @@ namespace Jaunty
 		/// Selects on Where
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="conditionalClause">Where clause</param>
+		/// <param name="condition">Where clause</param>
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this ConditionalClause conditionalClause, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this Condition condition, object token = null, IDbTransaction transaction = null)
 		{
-			var sql = ExtractSql<T>(conditionalClause);
-			var parameters = conditionalClause.GetParameters();
+			if (condition is null)
+				throw new ArgumentNullException(nameof(condition));
+
+			var sql = ExtractSql<T>(condition);
+			var parameters = condition.GetParameters();
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(token, eventArgs);
-			return conditionalClause.Connection.Query<T>(sql, parameters, transaction);
+			return condition.Connection.Query<T>(sql, parameters, transaction);
 		}
 
 		/// <summary>
 		/// Selects on GroupBy 
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="groupByClause">GroupBy clause</param>
+		/// <param name="groupBy">GroupBy clause</param>
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this GroupByClause groupByClause, string selectClause, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this GroupBy groupBy, string selectClause, object token = null, IDbTransaction transaction = null)
 		{
-			string sql = ExtractSql<T>(groupByClause, selectClause);
+			if (groupBy is null)
+				throw new ArgumentNullException(nameof(groupBy));
+
+			string sql = ExtractSql<T>(groupBy, selectClause: selectClause);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return groupByClause.Connection.Query<T>(sql, null, transaction);
+			return groupBy.Connection.Query<T>(sql, null, transaction);
 		}
 
 		/// <summary>
 		/// Selects on OrderBy
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="orderByClause">OrderBy clause</param>
+		/// <param name="orderBy">OrderBy clause</param>
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this OrderByClause orderByClause, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this OrderBy orderBy, object token = null, IDbTransaction transaction = null)
 		{
-			string sql = ExtractSql<T>(orderByClause);
+			if (orderBy is null)
+				throw new ArgumentNullException(nameof(orderBy));
+
+			string sql = ExtractSql<T>(orderBy);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return orderByClause.Connection.Query<T>(sql, transaction: transaction);
+			return orderBy.Connection.Query<T>(sql, transaction: transaction);
 		}
 
-		public static IEnumerable<T> Select<T>(this LimitClause limitClause, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this Limit limit, object token = null, IDbTransaction transaction = null)
 		{
-			var sql = ExtractSql<T>(limitClause);
+			if (limit is null)
+				throw new ArgumentNullException(nameof(limit));
+
+			var sql = ExtractSql<T>(limit);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
-			return limitClause.Connection.Query<T>(sql, transaction: transaction);
+			return limit.Connection.Query<T>(sql, transaction: transaction);
 		}
 
 		public static IEnumerable<T> Select<T>(this FetchFirst fetchFirst, object token = null, IDbTransaction transaction = null)
 		{
+			if (fetchFirst is null)
+				throw new ArgumentNullException(nameof(fetchFirst));
+
 			var sql = ExtractSql<T>(fetchFirst);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
@@ -218,6 +239,9 @@ namespace Jaunty
 
 		public static IEnumerable<T> Select<T>(this FetchNext fetchNext, object token = null, IDbTransaction transaction = null)
 		{
+			if (fetchNext is null)
+				throw new ArgumentNullException(nameof(fetchNext));
+
 			var sql = ExtractSql<T>(fetchNext);
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(token, eventArgs);
@@ -234,124 +258,127 @@ namespace Jaunty
 		//	return havingClause.Connection.Query<T>(sql, null, transaction);
 		//}
 
-		public static TopClause Top(this IDbConnection connection, int top)
+		public static Top Top(this IDbConnection connection, int top)
 		{
-			return new TopClause(connection, top);
+			return new Top(connection, top);
 		}
 
-		public static FromClause From<T>(this IDbConnection connection, string alias = null)
+		public static From From<T>(this IDbConnection connection, string alias = null)
 		{
-			return new FromClause(connection, GetType(typeof(T)), alias);
+			return new From(connection, GetType(typeof(T)), alias);
 		}
 
-		public static FromClause From<T>(this TopClause topClause, string alias = null)
+		public static From From<T>(this Top top, string alias = null)
 		{
-			return new FromClause(topClause, GetType(typeof(T)), alias);
+			return new From(top, GetType(typeof(T)), alias);
 		}
 
-		public static JoinClause InnerJoin<T>(this FromClause fromClause, string alias = null)
+		public static Join InnerJoin<T>(this From from, string alias = null)
 		{
-			return new JoinClause(fromClause, GetType(typeof(T)), alias);
+			return new Join(from, GetType(typeof(T)), alias);
 		}
 
-		public static JoinOnClause On(this JoinClause joinClause, string column1, string column2)
+		public static JoinOn On(this Join join, string column1, string column2)
 		{
-			return new JoinOnClause(joinClause, column1, column2);
+			return new JoinOn(join, column1, column2);
 		}
 
-		public static JoinClause InnerJoin<T>(this JoinOnClause joinOn, string alias = null)
+		public static Join InnerJoin<T>(this JoinOn joinOn, string alias = null)
 		{
-			return new JoinClause(joinOn, GetType(typeof(T)), alias);
+			return new Join(joinOn, GetType(typeof(T)), alias);
 		}
 
-		public static OrderByClause OrderBy(this FromClause fromClause, string orderByColumn, SortOrder? sortOrder = null)
+		public static OrderBy OrderBy(this From from, string orderByColumn, SortOrder? sortOrder = null)
 		{
-			return CreateOrderBy(fromClause, orderByColumn, sortOrder);
+			return CreateOrderBy(from, orderByColumn, sortOrder);
 		}
 
-		public static OrderByClause OrderBy(this ConditionalClause conditionClause, string orderByColumn, SortOrder? sortOrder = null)
+		public static OrderBy OrderBy(this Condition condition, string orderByColumn, SortOrder? sortOrder = null)
 		{
-			return CreateOrderBy(conditionClause, orderByColumn, sortOrder);
+			return CreateOrderBy(condition, orderByColumn, sortOrder);
 		}
 
-		public static OrderByClause OrderBy(this GroupByClause groupByClause, string orderByColumn, SortOrder? sortOrder = null)
+		public static OrderBy OrderBy(this GroupBy groupBy, string orderByColumn, SortOrder? sortOrder = null)
 		{
-			return CreateOrderBy(groupByClause, orderByColumn, sortOrder);
+			return CreateOrderBy(groupBy, orderByColumn, sortOrder);
 		}
 
-		public static OrderByClause OrderBy(this HavingClause havingClause, string orderByColumn, SortOrder? sortOrder = null)
+		public static OrderBy OrderBy(this Having having, string orderByColumn, SortOrder? sortOrder = null)
 		{
-			return CreateOrderBy(havingClause, orderByColumn, sortOrder);
+			return CreateOrderBy(having, orderByColumn, sortOrder);
 		}
 
-		public static OrderByClause OrderBy(this OrderByClause orderByClause, string orderByColumn, SortOrder? sortOrder = null)
+		public static OrderBy OrderBy(this OrderBy orderBy, string orderByColumn, SortOrder? sortOrder = null)
 		{
-			orderByClause.Add(orderByColumn, sortOrder);
-			return orderByClause;
-		}
+			if (orderBy is null)
+				throw new ArgumentNullException(nameof(orderBy));
 
-		private static OrderByClause CreateOrderBy(Clause clause, string orderByColumn, SortOrder? sortOrder)
-		{
-			var orderBy = new OrderByClause(clause);
 			orderBy.Add(orderByColumn, sortOrder);
 			return orderBy;
 		}
 
-		public static LimitClause Limit(this FromClause fromClause, int limit)
+		private static OrderBy CreateOrderBy(Clause clause, string orderByColumn, SortOrder? sortOrder)
 		{
-			return new LimitClause(fromClause, limit);
+			var orderBy = new OrderBy(clause);
+			orderBy.Add(orderByColumn, sortOrder);
+			return orderBy;
 		}
 
-		public static LimitClause Limit(this ConditionalClause conditionalClause, int limit)
+		public static Limit Limit(this From from, int limit)
 		{
-			return new LimitClause(conditionalClause, limit);
+			return new Limit(from, limit);
 		}
 
-		public static LimitClause Limit(this OrderByClause orderByClause, int limit)
+		public static Limit Limit(this Condition condition, int limit)
 		{
-			return new LimitClause(orderByClause, limit);
+			return new Limit(condition, limit);
 		}
 
-		public static OffsetClause Offset(this LimitClause limitClause, int offset)
+		public static Limit Limit(this OrderBy orderBy, int limit)
 		{
-			return new OffsetClause(limitClause, offset);
+			return new Limit(orderBy, limit);
 		}
 
-		public static OffsetClause Offset(this OrderByClause orderByClause, int offset)
+		public static Offset Offset(this Limit limit, int offset)
 		{
-			return new OffsetClause(orderByClause, offset);
+			return new Offset(limit, offset);
 		}
 
-		public static FetchFirst FetchFirst(this OffsetClause offsetClause, int rowCount)
+		public static Offset Offset(this OrderBy orderBy, int offset)
 		{
-			return new FetchFirst(offsetClause, rowCount);
+			return new Offset(orderBy, offset);
 		}
 
-		public static FetchNext FetchNext(this OffsetClause offsetClause, int rowCount)
+		public static FetchFirst FetchFirst(this Offset offset, int rowCount)
 		{
-			return new FetchNext(offsetClause, rowCount);
+			return new FetchFirst(offset, rowCount);
 		}
 
-		public static GroupByClause GroupBy(this FromClause fromClause, params string[] groupByColumns)
+		public static FetchNext FetchNext(this Offset offset, int rowCount)
 		{
-			return CreateGroupBy(fromClause, groupByColumns);
+			return new FetchNext(offset, rowCount);
 		}
 
-		public static GroupByClause GroupBy(this ConditionalClause conditionClause, params string[] groupByColumns)
+		public static GroupBy GroupBy(this From from, params string[] groupByColumns)
 		{
-			return CreateGroupBy(conditionClause, groupByColumns);
+			return CreateGroupBy(from, groupByColumns);
 		}
 
-		private static GroupByClause CreateGroupBy(Clause clause, params string[] columns)
+		public static GroupBy GroupBy(this Condition condition, params string[] groupByColumns)
 		{
-			var groupBy = new GroupByClause(clause);
+			return CreateGroupBy(condition, groupByColumns);
+		}
+
+		private static GroupBy CreateGroupBy(Clause clause, params string[] columns)
+		{
+			var groupBy = new GroupBy(clause);
 			groupBy.Add(columns);
 			return groupBy;
 		}
 
-		public static HavingClause Having(this GroupByClause groupByClause, string raw)
+		public static Having Having(this GroupBy groupBy, string raw)
 		{
-			var having = new HavingClause(groupByClause);
+			var having = new Having(groupBy);
 			having.Add(raw);
 			return having;
 		}
@@ -450,7 +477,7 @@ namespace Jaunty
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this FromClause fromClause, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this From fromClause, object token = null, IDbTransaction transaction = null)
 		{
 			string sql = ExtractSql<T>(fromClause);
 			var eventArgs = new SqlEventArgs { Sql = sql };
@@ -466,7 +493,7 @@ namespace Jaunty
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this JoinOnClause joinOn, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this JoinOn joinOn, object token = null, IDbTransaction transaction = null)
 		{
 			var sql = ExtractSql<T>(joinOn);
 			var eventArgs = new SqlEventArgs { Sql = sql };
@@ -482,7 +509,7 @@ namespace Jaunty
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this ConditionalClause conditionalClause, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this Condition conditionalClause, object token = null, IDbTransaction transaction = null)
 		{
 			var sql = ExtractSql<T>(conditionalClause);
 			var parameters = conditionalClause.GetParameters();
@@ -499,7 +526,7 @@ namespace Jaunty
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this GroupByClause groupByClause, string clause, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this GroupBy groupByClause, string clause, object token = null, IDbTransaction transaction = null)
 		{
 			var sql = ExtractSql<T>(groupByClause);
 			var eventArgs = new SqlEventArgs { Sql = sql };
@@ -515,7 +542,7 @@ namespace Jaunty
 		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this OrderByClause orderByClause, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this OrderBy orderByClause, object token = null, IDbTransaction transaction = null)
 		{
 			var sql = ExtractSql<T>(orderByClause);
 			var eventArgs = new SqlEventArgs { Sql = sql };
@@ -527,54 +554,51 @@ namespace Jaunty
 
 		#region private methods
 
-		private static string ExtractSql<T>(Clause clause, string selectClause = null, string alias = null, bool distinct = false)
+		private static string ExtractSql<T>(Clause clause, string alias = null, string selectClause = null)
 		{
-			var builder = new StringBuilder();
-			Type selectedType = GetType(typeof(T));
+			var type = GetType(typeof(T));
+			string sql = clause.Sql;
 			string selectedAlias = alias;
+
 			bool hasJoin = false;
 			bool hasTop = false;
+			bool hasDistinct = false;
 
 			while (clause != null)
 			{
-				hasJoin = hasJoin || clause is JoinClause;
-				hasTop = hasTop || clause is TopClause;
-				selectedAlias ??= GetSelectedAlias(clause, selectedType);
-
-				builder.PrependIf(builder.Length > 0, clause.Sql + " ");
-				builder.AppendIf(builder.Length == 0, clause.Sql);
-
+				hasJoin = hasJoin || clause is Join;
+				hasTop = hasTop || clause is Top;
+				hasDistinct = hasDistinct || clause is Distinct;
+				selectedAlias ??= GetSelectedAlias(clause, type);
 				clause = clause.PreviousClause;
 			}
-			
-			BuildSelect(builder, selectedType, selectClause, selectedAlias, distinct, hasJoin, hasTop);
-			builder.Append(";");
-			return builder.ToString();
-		}
 
-		private static void BuildSelect(StringBuilder builder, Type selectedType, string selectClause, string selectedAlias, bool distinct, bool hasJoin, bool hasTop)
-		{
-			selectClause ??= GetFormattedColumns(selectedType, selectedAlias ?? (hasJoin ? GetTypeName(selectedType) : null));
+			string columns = selectClause ?? GetFormattedColumns(type, selectedAlias ?? (hasJoin ? GetTypeName(type) : null));
+			var builder = new StringBuilder();
+			builder.Append("SELECT ");
 
-			if (!hasTop)
+			if (hasDistinct || hasTop)
 			{
-				builder.Prepend("SELECT " + (distinct ? "DISTINCT " : "") + selectClause + " ");
+				sql = sql.InsertBefore("FROM", columns + " ");
+				builder.Append(sql);
 			}
 			else
 			{
-				builder.PrependBefore("FROM", selectClause + " ");
-				builder.Prepend("SELECT " + (distinct ? "DISTINCT " : ""));
+				builder.Append(columns + " " + sql);
 			}
+
+			builder.Append(";");
+			return builder.ToString();
 		}
 
 		private static string GetSelectedAlias(Clause clause, Type selectedType)
 		{
 			switch (clause)
 			{
-				case FromClause fromClause when fromClause.EntityType.Equals(selectedType):
-					return fromClause.Alias;
-				case JoinClause joinClause when joinClause.EntityType.Equals(selectedType):
-					return joinClause.Alias;
+				case From from when from.Entity.Equals(selectedType):
+					return from.Alias;
+				case Join join when join.Entity.Equals(selectedType):
+					return join.Alias;
 				default:
 					break;
 			}

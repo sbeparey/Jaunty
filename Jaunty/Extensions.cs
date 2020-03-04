@@ -30,7 +30,72 @@ namespace Jaunty
 
 		internal static StringBuilder PrependBefore(this StringBuilder builder, string before, string text)
 		{
-			return builder.Insert(builder.ToString().IndexOf(before), text);
+			string temp = builder.ToString();
+			return builder.Insert(temp.IndexOf(before, StringComparison.CurrentCultureIgnoreCase), text);
+		}
+
+		internal static StringBuilder InsertBefore(this StringBuilder builder, string before, string text)
+		{
+			string temp = builder.ToString();
+			int index = temp.IndexOf(before, StringComparison.CurrentCultureIgnoreCase);
+			return builder.Insert(index, text);
+		}
+
+		internal static bool IsNullOrEmpty(this string text)
+		{
+			return string.IsNullOrEmpty(text);
+		}
+
+		internal static bool IsNullOrWhiteSpace(this string text)
+		{
+			return string.IsNullOrWhiteSpace(text);
+		}
+
+		internal static bool NotNull(this string text)
+		{
+			return text != null;
+		}
+
+		internal static bool NotNullOrEmpty(this string text)
+		{
+			return !string.IsNullOrEmpty(text);
+		}
+
+		internal static bool NotNullOrWhiteSpace(this string text)
+		{
+			return !string.IsNullOrWhiteSpace(text);
+		}
+
+		internal static string InsertBefore(this string originalText, string candidate, string toInsertText)
+		{
+			if (originalText.IsNullOrWhiteSpace())
+				throw new ArgumentNullException(nameof(originalText));
+
+			if (candidate.IsNullOrWhiteSpace())
+				throw new ArgumentNullException(nameof(candidate));
+
+			int index = originalText.IndexOf(candidate, StringComparison.CurrentCulture);
+
+			if (index == -1)
+				throw new ArgumentOutOfRangeException(nameof(candidate));
+
+			return originalText.Insert(index, toInsertText);
+		}
+
+		internal static string InsertAfter(this string originalText, string candidate, string toInsertText)
+		{
+			if (originalText.IsNullOrWhiteSpace())
+				throw new ArgumentNullException(nameof(originalText));
+
+			if (candidate.IsNullOrWhiteSpace())
+				throw new ArgumentNullException(nameof(candidate));
+
+			int index = originalText.IndexOf(candidate, StringComparison.CurrentCulture);
+
+			if (index == -1)
+				throw new ArgumentOutOfRangeException(nameof(candidate));
+
+			return originalText.Insert(index + candidate.Length, toInsertText);
 		}
 
 		internal static List<string> Prepend(this IList<string> list, string prefix)
