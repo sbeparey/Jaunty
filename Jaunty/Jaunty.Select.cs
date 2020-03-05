@@ -20,52 +20,54 @@ namespace Jaunty
 
 		public static event EventHandler<SqlEventArgs> OnSelecting;
 
+		#region regular select
+
 		/// <summary>
 		/// Gets all of the rows in a table.
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="connection">The connection to query on.</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/>.</returns>
-		public static IEnumerable<T> GetAll<T>(this IDbConnection connection, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> GetAll<T>(this IDbConnection connection, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			string sql = BuildSelectAllSql<T>();
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return connection.Query<T>(sql, transaction: transaction);
 		}
 
 		/// <summary>
 		/// Gets an entity by the specified key.
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <typeparam name="TKey">The primary key type.</typeparam>
 		/// <param name="connection">The connection to query on.</param>
 		/// <param name="key">The key.</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="T"/></returns>
-		public static T Get<T, TKey>(this IDbConnection connection, TKey key, object token = null, IDbTransaction transaction = null)
+		public static T Get<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = new Dictionary<string, object>();
 			string sql = BuildSelectSql<T, TKey>(key, parameters);
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return connection.QuerySingleOrDefault<T>(sql, parameters, transaction);
 		}
 
 		/// <summary>
 		/// Gets entities by the lambda expression.
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="connection">The connection to query on.</param>
 		/// <param name="expression">The key.</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		/// <exception cref="ArgumentNullException">expression</exception>
-		public static IEnumerable<T> Query<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Query<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (expression is null)
 			{
@@ -75,21 +77,21 @@ namespace Jaunty
 			var parameters = new Dictionary<string, object>();
 			string sql = BuildSelectSql(expression, parameters);
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return connection.Query<T>(sql, parameters, transaction);
 		}
 
 		/// <summary>
 		/// Gets entities by an anonymous object.
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="connection">The connection to query on.</param>
 		/// <param name="nameValuePairs">An anonymous object.</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		/// <exception cref="ArgumentNullException">expression</exception>
-		public static IEnumerable<T> Select<T>(this IDbConnection connection, object nameValuePairs, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (nameValuePairs is null)
 			{
@@ -99,26 +101,30 @@ namespace Jaunty
 			var parameters = nameValuePairs.ToDictionary();
 			string sql = BuildSelectSql<T>(parameters);
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return connection.Query<T>(sql, nameValuePairs, transaction);
 		}
+
+		#endregion
+
+		#region fluent select
 
 		/// <summary>
 		/// Selects on From 
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="from">From<T></param>
-		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this From from, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this From from, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (from is null)
 				throw new ArgumentNullException(nameof(from));
 
-			string sql = ExtractSql<T>(from);
+			string sql = GetSql<T>(from, ticket: ticket);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return from.Connection.Query<T>(sql, null, transaction);
 		}
 
@@ -127,136 +133,245 @@ namespace Jaunty
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="from">From<T></param>
-		/// <param name="token">A token object to identify the caller.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static string SelectAsString<T>(this From from)
+		/// <returns>Returns <see cref="String"/></returns>
+		public static string SelectAsSql<T>(this From from, ITicket ticket = null)
 		{
-			if (from is null)
-				throw new ArgumentNullException(nameof(from));
-
-			return ExtractSql<T>(from);
+			return GetSql<T>(from, ticket: ticket);
 		}
 
 		/// <summary>
 		/// Selects on Join
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="joinOn">InnerJoin<T> or LeftOuterJoin<T> or RightOuterJoin<T></param>
-		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this JoinOn joinOn, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this JoinOn joinOn, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (joinOn is null)
 				throw new ArgumentNullException(nameof(joinOn));
 
-			string sql = ExtractSql<T>(joinOn);
+			string sql = GetSql<T>(joinOn, ticket: ticket);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return joinOn.Connection.Query<T>(sql, transaction: transaction);
 		}
 
 		/// <summary>
-		/// Selects on Where
+		/// Selects on From 
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="joinOn">JoinOn<T></param>
+		/// <returns>Returns <see cref="string"/></returns>
+		public static string SelectAsSql<T>(this JoinOn joinOn, ITicket ticket = null)
+		{
+			if (joinOn is null)
+				throw new ArgumentNullException(nameof(joinOn));
+
+			return GetSql<T>(joinOn, ticket: ticket);
+		}
+
+		/// <summary>
+		/// Selects on Condition
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="condition">Where clause</param>
-		/// <param name="token">A token object to identify the caller.</param>
 		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this Condition condition, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (condition is null)
 				throw new ArgumentNullException(nameof(condition));
 
-			var sql = ExtractSql<T>(condition);
+			string sql = GetSql<T>(condition, ticket: ticket);
 			var parameters = condition.GetParameters();
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return condition.Connection.Query<T>(sql, parameters, transaction);
+		}
+
+		/// <summary>
+		/// Selects on Condition
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="condition">The condition clause</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Returns <see cref="string"/></returns>
+		public static string SelectAsSql<T>(this Condition condition, ITicket ticket = null)
+		{
+			return GetSql<T>(condition, ticket: ticket);
 		}
 
 		/// <summary>
 		/// Selects on GroupBy 
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="groupBy">GroupBy clause</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="selectClause"></param>
 		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this GroupBy groupBy, string selectClause, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this GroupBy groupBy, string selectClause, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (groupBy is null)
 				throw new ArgumentNullException(nameof(groupBy));
 
-			string sql = ExtractSql<T>(groupBy, selectClause: selectClause);
+			string sql = GetSql<T>(groupBy, selectClause: selectClause, ticket: ticket);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return groupBy.Connection.Query<T>(sql, null, transaction);
+		}
+		
+		/// <summary>
+		/// Selects on GroupBy
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="groupBy">GroupBy clause</param>
+		/// <param name="selectClause">Select clause</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns></returns>
+		public static string SelectAsSql<T>(this GroupBy groupBy, string selectClause, ITicket ticket = null)
+		{
+			return GetSql<T>(groupBy, selectClause: selectClause, ticket: ticket);
 		}
 
 		/// <summary>
 		/// Selects on OrderBy
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="orderBy">OrderBy clause</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this OrderBy orderBy, object token = null, IDbTransaction transaction = null)
+		public static IEnumerable<T> Select<T>(this OrderBy orderBy, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (orderBy is null)
 				throw new ArgumentNullException(nameof(orderBy));
 
-			string sql = ExtractSql<T>(orderBy);
+			string sql = GetSql<T>(orderBy, ticket: ticket);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return orderBy.Connection.Query<T>(sql, transaction: transaction);
 		}
 
-		public static IEnumerable<T> Select<T>(this Limit limit, object token = null, IDbTransaction transaction = null)
+		/// <summary>
+		/// Select on OrderBy
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="orderBy">OrderBy clause</param>
+		/// <param name="ticket"></param>
+		/// <returns>Returns <see cref="string"/></returns>
+		public static string SelectAsSql<T>(this OrderBy orderBy, ITicket ticket = null)
+		{
+			return GetSql<T>(orderBy, ticket: ticket);
+		}
+
+		/// <summary>
+		/// Selects on Limit
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="limit"></param>
+		/// <param name="transaction"></param>
+		/// <param name="ticket"></param>
+		/// <returns></returns>
+		public static IEnumerable<T> Select<T>(this Limit limit, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (limit is null)
 				throw new ArgumentNullException(nameof(limit));
 
-			var sql = ExtractSql<T>(limit);
+			var sql = GetSql<T>(limit, ticket: ticket);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return limit.Connection.Query<T>(sql, transaction: transaction);
 		}
 
-		public static IEnumerable<T> Select<T>(this FetchFirst fetchFirst, object token = null, IDbTransaction transaction = null)
+		/// <summary>
+		/// Selects on Limit
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="limit"></param>
+		/// <param name="ticket"></param>
+		/// <returns></returns>
+		public static string SelectAsSql<T>(this Limit limit, ITicket ticket = null)
+		{
+			return GetSql<T>(limit, ticket: ticket);
+		}
+
+		/// <summary>
+		/// Selects on FetchFirst
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="fetchFirst"></param>
+		/// <param name="transaction"></param>
+		/// <param name="ticket"></param>
+		/// <returns></returns>
+		public static IEnumerable<T> Select<T>(this FetchFirst fetchFirst, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (fetchFirst is null)
 				throw new ArgumentNullException(nameof(fetchFirst));
 
-			var sql = ExtractSql<T>(fetchFirst);
+			var sql = GetSql<T>(fetchFirst, ticket: ticket);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return fetchFirst.Connection.Query<T>(sql, transaction: transaction);
 		}
 
-		public static IEnumerable<T> Select<T>(this FetchNext fetchNext, object token = null, IDbTransaction transaction = null)
+		/// <summary>
+		/// Selects on FetchFirst
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="fetchFirst"></param>
+		/// <param name="ticket"></param>
+		/// <returns></returns>
+		public static string SelectAsSql<T>(this FetchFirst fetchFirst, ITicket ticket = null)
+		{
+			return GetSql<T>(fetchFirst, ticket: ticket);
+		}
+
+		/// <summary>
+		/// Selects on FetchNext
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="fetchNext"></param>
+		/// <param name="transaction"></param>
+		/// <param name="ticket"></param>
+		/// <returns></returns>
+		public static IEnumerable<T> Select<T>(this FetchNext fetchNext, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (fetchNext is null)
 				throw new ArgumentNullException(nameof(fetchNext));
 
-			var sql = ExtractSql<T>(fetchNext);
+			var sql = GetSql<T>(fetchNext, ticket: ticket);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return fetchNext.Connection.Query<T>(sql, transaction: transaction);
 		}
 
+		/// <summary>
+		/// Selects on FetchNext
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="fetchNext"></param>
+		/// <param name="ticket"></param>
+		/// <returns></returns>
+		public static string SelectAsSql<T>(this FetchNext fetchNext, ITicket ticket = null)
+		{
+			return GetSql<T>(fetchNext, ticket: ticket);
+		}
+
 		// Todo: Complete
-		//public static IEnumerable<T> Select<T>(this HavingClause havingClause, string clause, object token = null, IDbTransaction transaction = null)
+		//public static IEnumerable<T> Select<T>(this HavingClause havingClause, string clause, IDbTransaction transaction = null, ITicket ticket = null)
 		//{
 		//	var sql = new StringBuilder();
 		//	BuildHaving(havingClause, GetType(typeof(T)), clause, sql);
 		//	var eventArgs = new SqlEventArgs { Sql = sql };
-		//	OnSelecting?.Invoke(token, eventArgs);
+		//	OnSelecting?.Invoke(ticket, eventArgs);
 		//	return havingClause.Connection.Query<T>(sql, null, transaction);
 		//}
+
+		#endregion
 
 		public static Top Top(this IDbConnection connection, int top)
 		{
@@ -388,49 +503,49 @@ namespace Jaunty
 		/// <summary>
 		/// Gets all of the rows in a table asynchronously.
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="connection">The connection to query on.</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/>.</returns>
-		public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			string sql = BuildSelectAllSql<T>();
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return await connection.QueryAsync<T>(sql, transaction: transaction);
 		}
 
 		/// <summary>
 		/// Gets an entity by the specified key asynchronously.
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <typeparam name="TKey">The primary key type.</typeparam>
 		/// <param name="connection">The connection to query on.</param>
 		/// <param name="key">The key.</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="T"/></returns>
-		public static async Task<T> GetAsync<T, TKey>(this IDbConnection connection, TKey key, object token = null, IDbTransaction transaction = null)
+		public static async Task<T> GetAsync<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = new Dictionary<string, object>();
 			string sql = BuildSelectSql<T, TKey>(key, parameters);
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return await connection.QuerySingleOrDefaultAsync<T>(sql, parameters, transaction);
 		}
 
 		/// <summary>
 		/// Gets entities by the lambda expression asynchronously.
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="connection">The connection to query on.</param>
 		/// <param name="expression">The key.</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		/// <exception cref="ArgumentNullException">expression</exception>
-		public static async Task<IEnumerable<T>> QueryAsync<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> QueryAsync<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (expression is null)
 			{
@@ -440,22 +555,22 @@ namespace Jaunty
 			var parameters = new Dictionary<string, object>();
 			string sql = BuildSelectSql(expression, parameters);
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return await connection.QueryAsync<T>(sql, parameters, transaction);
 		}
 
 		/// <summary>
 		/// Gets entities by an anonymous object asynchronously.
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="connection">The connection to query on.</param>
 		/// <param name="nameValuePairs">An anonymous object.</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		/// <exception cref="ArgumentNullException">expression</exception>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this IDbConnection connection, object nameValuePairs,
-			object token = null, IDbTransaction transaction = null)
+			IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (nameValuePairs is null)
 			{
@@ -465,94 +580,111 @@ namespace Jaunty
 			var parameters = nameValuePairs.ToDictionary();
 			string sql = BuildSelectSql<T>(parameters);
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return await connection.QueryAsync<T>(sql, parameters, transaction);
 		}
 
 		/// <summary>
 		/// Selects on From asynchronously 
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="fromClause">From<T></param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this From fromClause, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this From fromClause, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			string sql = ExtractSql<T>(fromClause);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return await fromClause.Connection.QueryAsync<T>(sql, null, transaction);
 		}
 
 		/// <summary>
 		/// Selects on Join asynchronously
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="joinOn">InnerJoin<T> or LeftOuterJoin<T> or RightOuterJoin<T></param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this JoinOn joinOn, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this JoinOn joinOn, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var sql = ExtractSql<T>(joinOn);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return await joinOn.Connection.QueryAsync<T>(sql, transaction: transaction);
 		}
 
 		/// <summary>
 		/// Selects on Where asynchronously
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="conditionalClause">Where clause</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this Condition conditionalClause, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this Condition conditionalClause, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var sql = ExtractSql<T>(conditionalClause);
 			var parameters = conditionalClause.GetParameters();
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return await conditionalClause.Connection.QueryAsync<T>(sql, parameters, transaction);
 		}
 
 		/// <summary>
 		/// Selects on GroupBy asynchronously 
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="groupByClause">GroupBy clause</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this GroupBy groupByClause, string clause, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this GroupBy groupByClause, string clause, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var sql = ExtractSql<T>(groupByClause);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return await groupByClause.Connection.QueryAsync<T>(sql, null, transaction);
 		}
 
 		/// <summary>
 		/// Selects on OrderBy asynchronously
 		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="orderByClause">OrderBy clause</param>
-		/// <param name="token">A token object to identify the caller.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this OrderBy orderByClause, object token = null, IDbTransaction transaction = null)
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this OrderBy orderByClause, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var sql = ExtractSql<T>(orderByClause);
 			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(token, eventArgs);
+			OnSelecting?.Invoke(ticket, eventArgs);
 			return await orderByClause.Connection.QueryAsync<T>(sql, transaction: transaction);
 		}
 
 		#endregion
 
 		#region private methods
+
+		private static string GetSql<T>(Clause clause, string alias = null, string selectClause = null, ITicket ticket = null)
+		{
+			string sql;
+
+			if (ticket is null)
+			{
+				sql = ExtractSql<T>(clause, alias, selectClause);
+			}
+			else if (!_queriesCache.TryGetValue(ticket.Id, out sql))
+			{
+				sql = ExtractSql<T>(clause, alias, selectClause);
+				_queriesCache[ticket.Id] = sql;
+			}
+
+			return sql;
+		}
 
 		private static string ExtractSql<T>(Clause clause, string alias = null, string selectClause = null)
 		{

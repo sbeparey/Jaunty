@@ -25,18 +25,11 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void GetAll_Products_ReturnsAllProducts()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("get all products using GetAll<T>");
 			string sql = null;
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
-
-			var products = northwind.Connection.GetAll<Product>(token: guid).ToList();
+			var products = northwind.Connection.GetAll<Product>(ticket: ticket).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -49,18 +42,11 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void GetAll_OrderDetails_ReturnsAllOrderDetails()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("get all order details using GetAll<T>");
 			string sql = null;
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
-
-			var orderDetails = northwind.Connection.GetAll<OrderDetail>(token: guid).ToList();
+			var orderDetails = northwind.Connection.GetAll<OrderDetail>(ticket: ticket).ToList();
 
 			Assert.Equal("SELECT OrderId, ProductId, UnitPrice, Quantity, Discount " +
 						 "FROM \"Order Details\";", sql);
@@ -72,20 +58,20 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void Get_ProductByPrimaryKey_ReturnsAProduct()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("get product by primary key");
 			string sql = null;
 			IDictionary<string, object> parameters = null;
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
+				if (sender == ticket)
 				{
 					sql = args.Sql;
 					parameters = args.Parameters;
 				}
 			};
 
-			Product product = northwind.Connection.Get<Product, int>(1, token: guid);
+			Product product = northwind.Connection.Get<Product, int>(1, ticket: ticket);
 
 			Assert.Equal(1, product.ProductId);
 
@@ -103,20 +89,20 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByAnonymousObject_Products_ReturnsAListOfProducts()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("select product by anonymous object query");
 			string sql = null;
 			IDictionary<string, object> parameters = null;
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
+				if (sender == ticket)
 				{
 					sql = args.Sql;
 					parameters = args.Parameters;
 				}
 			};
 
-			var products = northwind.Connection.Select<Product>(new { CategoryId = 1, SupplierId = 1 }, token: guid).ToList();
+			var products = northwind.Connection.Select<Product>(new { CategoryId = 1, SupplierId = 1 }, ticket: ticket).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -134,20 +120,20 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByLambda_Products_ReturnsAListOfProducts()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("select product by lambda query");
 			string sql = null;
 			IDictionary<string, object> parameters = null;
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
+				if (sender == ticket)
 				{
 					sql = args.Sql;
 					parameters = args.Parameters;
 				}
 			};
 
-			var products = northwind.Connection.Query<Product>(x => x.CategoryId == 1 && x.SupplierId == 1, token: guid).ToList();
+			var products = northwind.Connection.Query<Product>(x => x.CategoryId == 1 && x.SupplierId == 1, ticket: ticket).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -165,19 +151,13 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAllProducts()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select all products");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var products = northwind.Connection.From<Product>()
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -191,20 +171,14 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectTopByFluent_Products_ReturnsAllProducts()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select top 15 products");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var products = northwind.Connection.Top(15)
 											   .From<Product>()
-											   .Select<Product>(token: guid).ToList();
+											   .Select<Product>(ticket: ticket).ToList();
 
 			Assert.Equal("SELECT TOP 15 ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -217,19 +191,19 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		//[Fact]
 		//public void SelectDistinctByFluent_Products_ReturnsAllProducts()
 		//{
-		//	var guid = Guid.NewGuid();
+		//	var ticket = new Ticket("");
 		//	string sql = null;
 
 		//	Jaunty.OnSelecting += (sender, args) =>
 		//	{
-		//		if (((Guid)sender).Equals(guid))
+		//		if (sender == ticket)
 		//		{
 		//			sql = args.Sql;
 		//		}
 		//	};
 
 		//	var products = northwind.Connection.From<Product>()
-		//									   .SelectDistinct<Product>(token: guid).ToList();
+		//									   .SelectDistinct<Product>(ticket: ticket).ToList();
 
 		//	Assert.Equal("SELECT DISTINCT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 		//					"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -242,12 +216,12 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		//[Fact]
 		//public void SelectDistinctTopByFluent_Products_ReturnsAllProducts()
 		//{
-		//	var guid = Guid.NewGuid();
+		//	var ticket = new Ticket("");
 		//	string sql = null;
 
 		//	Jaunty.OnSelecting += (sender, args) =>
 		//	{
-		//		if (((Guid)sender).Equals(guid))
+		//		if (sender == ticket)
 		//		{
 		//			sql = args.Sql;
 		//		}
@@ -255,7 +229,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 		//	var products = northwind.Connection.Top(10)
 		//									   .From<Product>()
-		//									   .SelectDistinct<Product>(token: guid).ToList();
+		//									   .SelectDistinct<Product>(ticket: ticket).ToList();
 
 		//	Assert.Equal("SELECT DISTINCT TOP 10 ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 		//					"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -268,12 +242,12 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		//[Fact]
 		//public void SelectWithLimitByFluent_Products_ReturnsAllProducts()
 		//{
-		//	var guid = Guid.NewGuid();
+		//	var ticket = new Ticket("");
 		//	string sql = null;
 
 		//	Jaunty.OnSelecting += (sender, args) =>
 		//	{
-		//		if (((Guid)sender).Equals(guid))
+		//		if (sender == ticket)
 		//		{
 		//			sql = args.Sql;
 		//		}
@@ -281,7 +255,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 		//	var products = northwind.Connection.From<Product>()
 		//									   .Limit(15)
-		//									   .Select<Product>(token: guid).ToList();
+		//									   .Select<Product>(ticket: ticket).ToList();
 
 		//	Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 		//					"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -295,12 +269,12 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		//[Fact]
 		//public void SelectWhereWithLimitByFluent_Products_ReturnsAllProducts()
 		//{
-		//	var guid = Guid.NewGuid();
+		//	var ticket = new Ticket("");
 		//	string sql = null;
 
 		//	Jaunty.OnSelecting += (sender, args) =>
 		//	{
-		//		if (((Guid)sender).Equals(guid))
+		//		if (sender == ticket)
 		//		{
 		//			sql = args.Sql;
 		//		}
@@ -309,7 +283,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		//	var products = northwind.Connection.From<Product>()
 		//									   .Where("CategoryId", 2)
 		//									   .Limit(5)
-		//									   .Select<Product>(token: guid).ToList();
+		//									   .Select<Product>(ticket: ticket).ToList();
 
 		//	Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 		//					"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -324,22 +298,16 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectOrderByWithLimitByFluent_Products_ReturnsAllProducts()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select first 10 products ordered by product name using offset");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var products = northwind.Connection.From<Product>()
 											   .OrderBy("ProductName")
 											   .Offset(0)
 											   .FetchNext(10)
-											   .Select<Product>(token: guid).ToList();
+											   .Select<Product>(ticket: ticket).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -356,20 +324,14 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAllProductsOrderedByProductId()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select all products ordered by product id");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var products = northwind.Connection.From<Product>()
 											   .OrderBy("ProductId")
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -384,20 +346,14 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAllProductsOrderedByProductIdDescending()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select all products ordered by product id descending");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var products = northwind.Connection.From<Product>()
 											   .OrderBy("ProductId", Jaunty.SortOrder.Descending)
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -412,21 +368,15 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAllProductsOrderedByProductIdAndProductName()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select products ordered by product id then product name");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var products = northwind.Connection.From<Product>()
 											   .OrderBy("ProductId")
 											   .OrderBy("ProductName")
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -441,21 +391,15 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAllProductsOrderedByProductIdAndProductNameDescending()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select products ordered by product id then product name descending");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var products = northwind.Connection.From<Product>()
 											   .OrderBy("ProductId")
 											   .OrderBy("ProductName", Jaunty.SortOrder.Descending)
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -470,20 +414,14 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsProductNameAndCountGroupedByProductName()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select products' name count from products grouped by product name");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var products = northwind.Connection.From<Product>()
 											   .GroupBy("ProductName")
-											   .Select<Product>("ProductName, count(*)", token: guid)
+											   .Select<Product>("ProductName, count(*)", ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductName, count(*) " +
@@ -497,13 +435,13 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAProductWhereProductIdIs12()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select products where product id is 12");
 			string sql = null;
 			IDictionary<string, object> parameters = null;
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
+				if (sender == ticket)
 				{
 					sql = args.Sql;
 					parameters = args.Parameters;
@@ -512,7 +450,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Product product = northwind.Connection.From<Product>()
 												  .Where("ProductId", 12)
-												  .Select<Product>(token: guid)
+												  .Select<Product>(ticket: ticket)
 												  .SingleOrDefault();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -529,13 +467,13 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAListOfProductsWhereProductIdIs1AndCategoryIdIs1()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select products where supplier id is 1 and category id is 1");
 			string sql = null;
 			IDictionary<string, object> parameters = null;
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
+				if (sender == ticket)
 				{
 					sql = args.Sql;
 					parameters = args.Parameters;
@@ -545,7 +483,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			var products = northwind.Connection.From<Product>()
 											   .Where("SupplierId", 1)
 											   .AndWhere("CategoryId", 1)
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -564,21 +502,15 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAListOfCategoriesInnerJoinedToProducts()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select categories from products inner joined to categories");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sender, args) =>
-			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
-			};
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var categories = northwind.Connection.From<Product>("p")
 												 .InnerJoin<Category>("c")
 												 .On("p.CategoryId", "c.CategoryId")
-												 .Select<Category>(token: guid)
+												 .Select<Category>(ticket: ticket)
 												 .ToList();
 
 			Assert.Equal("SELECT c.CategoryId, c.CategoryName, c.Description, c.Picture " +
@@ -593,13 +525,13 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAListOfCategoriesInnerJoinedToProductsWhereCategoryNameIsProduce()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select categories from products inner joined to categories where category name is produce");
 			string sql = null;
 			IDictionary<string, object> parameters = null;
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
+				if (sender == ticket)
 				{
 					sql = args.Sql;
 					parameters = args.Parameters;
@@ -610,7 +542,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 												 .InnerJoin<Category>()
 												 .On("Products.CategoryId", "Categories.CategoryId")
 												 .Where("CategoryName", "Produce")
-												 .Select<Category>(token: guid)
+												 .Select<Category>(ticket: ticket)
 												 .ToList();
 
 			Assert.Equal("SELECT Categories.CategoryId, Categories.CategoryName, Categories.Description, Categories.Picture " +
@@ -628,13 +560,13 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAListOfOrdersInnerJoinedToOrderDetailsInnerJoinedToProductsWhereProductIdIs1()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select orders from products inner joined to order details inner joined to order where product id is 1");
 			string sql = null;
 			IDictionary<string, object> parameters = null;
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
+				if (sender == ticket)
 				{
 					sql = args.Sql;
 					parameters = args.Parameters;
@@ -647,7 +579,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 											 .InnerJoin<Order>("o")
 											 .On("o.OrderId", "od.OrderId")
 											 .Where("p.ProductId", 1)
-											 .Select<Order>(token: guid)
+											 .Select<Order>(ticket: ticket)
 											 .ToList();
 
 			Assert.Equal("SELECT o.OrderId, o.CustomerId, o.EmployeeId, o.OrderDate, o.RequiredDate, o.ShippedDate, " +
@@ -668,13 +600,13 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		[Fact]
 		public void SelectByFluent_Products_ReturnsAListOfEmployeesInnerJoinedToOrdersInnerJoinedToOrderDetailsInnerJoinedToProductsWhereEmployeeIdIs1()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("fluent select employees from products inner joined to order details inner joined to order inner joined to employees where employee id is 1");
 			string sql = null;
 			IDictionary<string, object> parameters = null;
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
+				if (sender == ticket)
 				{
 					sql = args.Sql;
 					parameters = args.Parameters;
@@ -689,7 +621,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 												.InnerJoin<Employee>("e")
 												.On("e.EmployeeId", "o.EmployeeId")
 												.Where("e.EmployeeId", 1)
-												.Select<Employee>(token: guid)
+												.Select<Employee>(ticket: ticket)
 												.ToList();
 
 			Assert.Equal("SELECT e.EmployeeId, e.LastName, e.FirstName, e.Title, e.TitleOfCourtesy, e.Address, e.City, e.Region, " +

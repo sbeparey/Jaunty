@@ -172,6 +172,8 @@ namespace Jaunty
 		private static readonly ConcurrentDictionary<RuntimeTypeHandle, string> _tableNamesCache =
 			new ConcurrentDictionary<RuntimeTypeHandle, string>();
 
+		private static readonly ConcurrentDictionary<string, string> _queriesCache = new ConcurrentDictionary<string, string>();
+
 		internal static Type GetType(Type type)
 		{
 			if (type.IsArray)

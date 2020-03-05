@@ -35,7 +35,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 				}
 			};
 
-			var products = northwind.Connection.GetAll<Product>(token: guid).ToList();
+			var products = northwind.Connection.GetAll<Product>(ticket: ticket).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -59,7 +59,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 				}
 			};
 
-			var orderDetails = northwind.Connection.GetAll<OrderDetail>(token: guid).ToList();
+			var orderDetails = northwind.Connection.GetAll<OrderDetail>(ticket: ticket).ToList();
 
 			Assert.Equal("SELECT OrderId, ProductId, UnitPrice, Quantity, Discount " +
 						 "FROM \"Order Details\";", sql);
@@ -84,7 +84,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 				}
 			};
 
-			Product product = northwind.Connection.Get<Product, int>(1, token: guid);
+			Product product = northwind.Connection.Get<Product, int>(1, ticket: ticket);
 
 			Assert.Equal(1, product.ProductId);
 
@@ -115,7 +115,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 				}
 			};
 
-			var products = northwind.Connection.Select<Product>(new { CategoryId = 1, SupplierId = 1 }, token: guid).ToList();
+			var products = northwind.Connection.Select<Product>(new { CategoryId = 1, SupplierId = 1 }, ticket: ticket).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -146,7 +146,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 				}
 			};
 
-			var products = northwind.Connection.Query<Product>(x => x.CategoryId == 1 && x.SupplierId == 1, token: guid).ToList();
+			var products = northwind.Connection.Query<Product>(x => x.CategoryId == 1 && x.SupplierId == 1, ticket: ticket).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -176,7 +176,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 			};
 
 			var products = northwind.Connection.From<Product>()
-											   .Select<Product>(token: guid).ToList();
+											   .Select<Product>(ticket: ticket).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -202,7 +202,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 
 			var products = northwind.Connection.From<Product>()
 											   .OrderBy("ProductId")
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -230,7 +230,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 
 			var products = northwind.Connection.From<Product>()
 											   .OrderBy("ProductId", Jaunty.SortOrder.Descending)
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -259,7 +259,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 			var products = northwind.Connection.From<Product>()
 											   .OrderBy("ProductId")
 											   .OrderBy("ProductName")
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -288,7 +288,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 			var products = northwind.Connection.From<Product>()
 											   .OrderBy("ProductId")
 											   .OrderBy("ProductName", Jaunty.SortOrder.Descending)
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -316,7 +316,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 
 			var products = northwind.Connection.From<Product>()
 											   .GroupBy("ProductName")
-											   .Select<Product>("ProductName, count(*)", token: guid)
+											   .Select<Product>("ProductName, count(*)", ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductName, count(*) " +
@@ -345,7 +345,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 
 			Product product = northwind.Connection.From<Product>()
 												  .Where("ProductId", 12)
-												  .Select<Product>(token: guid)
+												  .Select<Product>(ticket: ticket)
 												  .SingleOrDefault();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -378,7 +378,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 			var products = northwind.Connection.From<Product>()
 											   .Where("SupplierId", 1)
 											   .AndWhere("CategoryId", 1)
-											   .Select<Product>(token: guid)
+											   .Select<Product>(ticket: ticket)
 											   .ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
@@ -411,7 +411,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 			var categories = northwind.Connection.From<Product>("p")
 												 .InnerJoin<Category>("c")
 												 .On("p.CategoryId", "c.CategoryId")
-												 .Select<Category>(token: guid)
+												 .Select<Category>(ticket: ticket)
 												 .ToList();
 
 			Assert.Equal("SELECT c.CategoryId, c.CategoryName, c.Description, c.Picture " +
@@ -443,7 +443,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 												 .InnerJoin<Category>()
 												 .On("Products.CategoryId", "Categories.CategoryId")
 												 .Where("CategoryName", "Produce")
-												 .Select<Category>(token: guid)
+												 .Select<Category>(ticket: ticket)
 												 .ToList();
 
 			Assert.Equal("SELECT Categories.CategoryId, Categories.CategoryName, Categories.Description, Categories.Picture " +
@@ -480,7 +480,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 											 .InnerJoin<Order>("o")
 											 .On("o.OrderId", "od.OrderId")
 											 .Where("p.ProductId", 1)
-											 .Select<Order>(token: guid)
+											 .Select<Order>(ticket: ticket)
 											 .ToList();
 
 			Assert.Equal("SELECT o.OrderId, o.CustomerId, o.EmployeeId, o.OrderDate, o.RequiredDate, o.ShippedDate, " +
@@ -522,7 +522,7 @@ namespace Jaunty.Tests.Mysql.IntegrationTests
 												.InnerJoin<Employee>("e")
 												.On("e.EmployeeId", "o.EmployeeId")
 												.Where("e.EmployeeId", 1)
-												.Select<Employee>(token: guid)
+												.Select<Employee>(ticket: ticket)
 												.ToList();
 
 			Assert.Equal("SELECT e.EmployeeId, e.LastName, e.FirstName, e.Title, e.TitleOfCourtesy, e.Address, e.City, e.Region, " +
