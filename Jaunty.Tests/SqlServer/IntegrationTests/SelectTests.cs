@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-using Jaunty.Tests.Entities;
+﻿using Jaunty.Tests.Entities;
 
 using Pluralize.NET;
+
+using System.Collections.Generic;
+using System.Linq;
 
 using Xunit;
 
@@ -23,7 +22,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void GetAll_Products_ReturnsAllProducts()
+		public void get_all_using_GetAll_returns_a_collection_of_products()
 		{
 			var ticket = new Ticket("get all products using GetAll<T>");
 			string sql = null;
@@ -40,7 +39,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void GetAll_OrderDetails_ReturnsAllOrderDetails()
+		public void get_all_using_GetAll_returns_a_collection_of_order_details()
 		{
 			var ticket = new Ticket("get all order details using GetAll<T>");
 			string sql = null;
@@ -64,11 +63,8 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (sender == ticket)
-				{
-					sql = args.Sql;
-					parameters = args.Parameters;
-				}
+				sql = args.Sql;
+				parameters = args.Parameters;
 			};
 
 			Product product = northwind.Connection.Get<Product, int>(1, ticket: ticket);
@@ -95,11 +91,8 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (sender == ticket)
-				{
-					sql = args.Sql;
-					parameters = args.Parameters;
-				}
+				sql = args.Sql;
+				parameters = args.Parameters;
 			};
 
 			var products = northwind.Connection.Select<Product>(new { CategoryId = 1, SupplierId = 1 }, ticket: ticket).ToList();
@@ -126,11 +119,8 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (sender == ticket)
-				{
-					sql = args.Sql;
-					parameters = args.Parameters;
-				}
+				sql = args.Sql;
+				parameters = args.Parameters;
 			};
 
 			var products = northwind.Connection.Query<Product>(x => x.CategoryId == 1 && x.SupplierId == 1, ticket: ticket).ToList();
@@ -441,11 +431,8 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (sender == ticket)
-				{
-					sql = args.Sql;
-					parameters = args.Parameters;
-				}
+				sql = args.Sql;
+				parameters = args.Parameters;
 			};
 
 			Product product = northwind.Connection.From<Product>()
@@ -473,11 +460,8 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (sender == ticket)
-				{
-					sql = args.Sql;
-					parameters = args.Parameters;
-				}
+				sql = args.Sql;
+				parameters = args.Parameters;
 			};
 
 			var products = northwind.Connection.From<Product>()
@@ -531,11 +515,8 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (sender == ticket)
-				{
-					sql = args.Sql;
-					parameters = args.Parameters;
-				}
+				sql = args.Sql;
+				parameters = args.Parameters;
 			};
 
 			var categories = northwind.Connection.From<Product>()
@@ -566,11 +547,8 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (sender == ticket)
-				{
-					sql = args.Sql;
-					parameters = args.Parameters;
-				}
+				sql = args.Sql;
+				parameters = args.Parameters;
 			};
 
 			var orders = northwind.Connection.From<Product>("p")
@@ -606,11 +584,8 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Jaunty.OnSelecting += (sender, args) =>
 			{
-				if (sender == ticket)
-				{
-					sql = args.Sql;
-					parameters = args.Parameters;
-				}
+				sql = args.Sql;
+				parameters = args.Parameters;
 			};
 
 			var employees = northwind.Connection.From<Product>("p")
