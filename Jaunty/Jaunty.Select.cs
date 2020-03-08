@@ -35,7 +35,7 @@ namespace Jaunty
 			string sql = ticket is null ? BuildSelectAllSql<T>() : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectAllSql<T>());
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return connection.Query<T>(sql, transaction: transaction);
+			return SqlMapper.Query<T>(connection, sql, transaction: transaction);
 		}
 
 		/// <summary>
@@ -91,7 +91,7 @@ namespace Jaunty
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		/// <exception cref="ArgumentNullException">expression</exception>
-		public static IEnumerable<T> Select<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
+		public static IEnumerable<T> Query<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (nameValuePairs is null)
 			{
@@ -158,7 +158,7 @@ namespace Jaunty
 			string sql = ticket is null ? ExtractSql<T>(joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(joinOn));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return joinOn.Connection.Query<T>(sql, transaction: transaction);
+			return SqlMapper.Query<T>(joinOn.Connection, sql, transaction: transaction);
 		}
 
 		/// <summary>
@@ -266,7 +266,7 @@ namespace Jaunty
 			string sql = ticket is null ? ExtractSql<T>(orderBy) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(orderBy));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return orderBy.Connection.Query<T>(sql, transaction: transaction);
+			return SqlMapper.Query<T>(orderBy.Connection, sql, transaction: transaction);
 		}
 
 		/// <summary>
@@ -300,7 +300,7 @@ namespace Jaunty
 			var sql = ticket is null ? ExtractSql<T>(limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(limit));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return limit.Connection.Query<T>(sql, transaction: transaction);
+			return SqlMapper.Query<T>(limit.Connection, sql, transaction: transaction);
 		}
 
 		/// <summary>
@@ -334,7 +334,7 @@ namespace Jaunty
 			var sql = ticket is null ? ExtractSql<T>(fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchFirst));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return fetchFirst.Connection.Query<T>(sql, transaction: transaction);
+			return SqlMapper.Query<T>(fetchFirst.Connection, sql, transaction: transaction);
 		}
 
 		/// <summary>
@@ -368,7 +368,7 @@ namespace Jaunty
 			var sql = ticket is null ? ExtractSql<T>(fetchNext): _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchNext));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return fetchNext.Connection.Query<T>(sql, transaction: transaction);
+			return SqlMapper.Query<T>(fetchNext.Connection, sql, transaction: transaction);
 		}
 
 		/// <summary>

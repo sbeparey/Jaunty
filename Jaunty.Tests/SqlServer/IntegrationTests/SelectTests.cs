@@ -1,20 +1,24 @@
 ﻿using Jaunty.Tests.Entities;
 
 using Pluralize.NET;
-
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Jaunty.Tests.SqlServer.IntegrationTests
 {
 	public class SelectTests : IClassFixture<Northwind>
 	{
+		private readonly ITestOutputHelper output;
 		private readonly Northwind northwind;
 
-		public SelectTests(Northwind northwind)
+		public SelectTests(ITestOutputHelper output, Northwind northwind)
 		{
+			this.output = output;
 			Jaunty.SqlDialect = Jaunty.Dialects.SqlServer;
 			this.northwind = northwind;
 			IPluralize pluralize = new Pluralizer();
@@ -55,9 +59,9 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void Get_ProductByPrimaryKey_ReturnsAProduct()
+		public void get_by_primary_key_using_Get_returns_a_product()
 		{
-			var ticket = new Ticket("get product by primary key");
+			var ticket = new Ticket("get a product via primary key using Get");
 			string sql = null;
 			IDictionary<string, object> parameters = null;
 
@@ -83,7 +87,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByAnonymousObject_Products_ReturnsAListOfProducts()
+		public void get_using_anonymous_object_Query_returns_a_collection_of_products()
 		{
 			var ticket = new Ticket("select product by anonymous object query");
 			string sql = null;
@@ -95,7 +99,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				parameters = args.Parameters;
 			};
 
-			var products = northwind.Connection.Select<Product>(new { CategoryId = 1, SupplierId = 1 }, ticket: ticket).ToList();
+			var products = northwind.Connection.Query<Product>(new { CategoryId = 1, SupplierId = 1 }, ticket: ticket).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -111,7 +115,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByLambda_Products_ReturnsAListOfProducts()
+		public void get_using_lambda_Query_returns_a_collection_of_products()
 		{
 			var ticket = new Ticket("select product by lambda query");
 			string sql = null;
@@ -139,7 +143,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAllProducts()
+		public void get_using_fluent_Select_returns_a_collection_of_products()
 		{
 			var ticket = new Ticket("fluent select all products");
 			string sql = null;
@@ -159,7 +163,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectTopByFluent_Products_ReturnsAllProducts()
+		public void get_top_15_using_fluent_Select_returns_a_collection_of_15_products()
 		{
 			var ticket = new Ticket("fluent select top 15 products");
 			string sql = null;
@@ -286,7 +290,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		//}
 
 		[Fact]
-		public void SelectOrderByWithLimitByFluent_Products_ReturnsAllProducts()
+		public void get_top_10_using_fluent_Select_returns_a_collection_of_first_10_products()
 		{
 			var ticket = new Ticket("fluent select first 10 products ordered by product name using offset");
 			string sql = null;
@@ -312,7 +316,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAllProductsOrderedByProductId()
+		public void get_ordered_items_using_fluent_Select_returns_a_collection_of_products_ordered_by_ProductId()
 		{
 			var ticket = new Ticket("fluent select all products ordered by product id");
 			string sql = null;
@@ -334,7 +338,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAllProductsOrderedByProductIdDescending()
+		public void get_ordered_items_using_fluent_Select_returns_a_collection_of_products_ordered_by_ProductId_descending()
 		{
 			var ticket = new Ticket("fluent select all products ordered by product id descending");
 			string sql = null;
@@ -356,7 +360,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAllProductsOrderedByProductIdAndProductName()
+		public void get_multiple_ordered_items_using_fluent_Select_returns_a_collection_of_products_ordered_by_ProductId_and_ProductName()
 		{
 			var ticket = new Ticket("fluent select products ordered by product id then product name");
 			string sql = null;
@@ -379,7 +383,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAllProductsOrderedByProductIdAndProductNameDescending()
+		public void get_multiple_ordered_items_using_fluent_Select_returns_a_collection_of_products_ordered_by_ProductId_and_ProductName_descending()
 		{
 			var ticket = new Ticket("fluent select products ordered by product id then product name descending");
 			string sql = null;
@@ -402,7 +406,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsProductNameAndCountGroupedByProductName()
+		public void get_count_using_fluent_Select_returns_a_collection_of_ProductName_and_count_tuple()
 		{
 			var ticket = new Ticket("fluent select products' name count from products grouped by product name");
 			string sql = null;
@@ -423,7 +427,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAProductWhereProductIdIs12()
+		public void get_a_single_item_using_fluent_Select_returns_a_product()
 		{
 			var ticket = new Ticket("fluent select products where product id is 12");
 			string sql = null;
@@ -452,7 +456,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAListOfProductsWhereProductIdIs1AndCategoryIdIs1()
+		public void get_by_where_using_Select_returns_a_collection_of_products()
 		{
 			var ticket = new Ticket("fluent select products where supplier id is 1 and category id is 1");
 			string sql = null;
@@ -484,7 +488,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAListOfCategoriesInnerJoinedToProducts()
+		public void get_with_an_inner_join_using_fluent_Select_returns_a_collection_of_categories()
 		{
 			var ticket = new Ticket("fluent select categories from products inner joined to categories");
 			string sql = null;
@@ -507,7 +511,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAListOfCategoriesInnerJoinedToProductsWhereCategoryNameIsProduce()
+		public void get_with_an_inner_join_plus_where_clause_using_fluent_Select_returns_a_collection_of_categories()
 		{
 			var ticket = new Ticket("fluent select categories from products inner joined to categories where category name is produce");
 			string sql = null;
@@ -539,7 +543,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAListOfOrdersInnerJoinedToOrderDetailsInnerJoinedToProductsWhereProductIdIs1()
+		public void get_with_two_inner_joins_and_where_clause_using_fluent_Select_returns_a_collection_of_orders()
 		{
 			var ticket = new Ticket("fluent select orders from products inner joined to order details inner joined to order where product id is 1");
 			string sql = null;
@@ -576,7 +580,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void SelectByFluent_Products_ReturnsAListOfEmployeesInnerJoinedToOrdersInnerJoinedToOrderDetailsInnerJoinedToProductsWhereEmployeeIdIs1()
+		public void get_with_three_inner_joins_and_where_clause_using_fluent_Select_returns_a_collection_of_employees()
 		{
 			var ticket = new Ticket("fluent select employees from products inner joined to order details inner joined to order inner joined to employees where employee id is 1");
 			string sql = null;
@@ -588,6 +592,8 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				parameters = args.Parameters;
 			};
 
+			var sw = new Stopwatch();
+			sw.Start();
 			var employees = northwind.Connection.From<Product>("p")
 												.InnerJoin<OrderDetail>("od")
 												.On("p.ProductId", "od.ProductId")
@@ -598,6 +604,37 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 												.Where("e.EmployeeId", 1)
 												.Select<Employee>(ticket: ticket)
 												.ToList();
+			sw.Stop();
+			output.WriteLine(sw.ElapsedTicks.ToString());
+			
+			sw.Reset();
+			sw.Start();
+			employees = northwind.Connection.From<Product>("p")
+									.InnerJoin<OrderDetail>("od")
+									.On("p.ProductId", "od.ProductId")
+									.InnerJoin<Order>("o")
+									.On("o.OrderId", "od.OrderId")
+									.InnerJoin<Employee>("e")
+									.On("e.EmployeeId", "o.EmployeeId")
+									.Where("e.EmployeeId", 1)
+									.Select<Employee>(ticket: ticket)
+									.ToList();
+			sw.Stop();
+			output.WriteLine(sw.ElapsedTicks.ToString());
+			sw.Reset();
+			sw.Start();
+
+			string s = northwind.Connection.From<Product>("p")
+									.InnerJoin<OrderDetail>("od")
+									.On("p.ProductId", "od.ProductId")
+									.InnerJoin<Order>("o")
+									.On("o.OrderId", "od.OrderId")
+									.InnerJoin<Employee>("e")
+									.On("e.EmployeeId", "o.EmployeeId")
+									.Where("e.EmployeeId", 1)
+									.SelectAsSql<Employee>(ticket: ticket);
+			sw.Stop();
+			output.WriteLine(sw.ElapsedTicks.ToString());
 
 			Assert.Equal("SELECT e.EmployeeId, e.LastName, e.FirstName, e.Title, e.TitleOfCourtesy, e.Address, e.City, e.Region, " +
 							"e.PostalCode, e.Country, e.HomePhone, e.Extension, e.Photo, e.Notes, e.ReportsTo, e.PhotoPath " +
