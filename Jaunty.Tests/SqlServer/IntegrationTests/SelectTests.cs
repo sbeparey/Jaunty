@@ -1,9 +1,8 @@
 ﻿using Jaunty.Tests.Entities;
 
 using Pluralize.NET;
-using System;
+
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 using Xunit;
@@ -99,7 +98,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				parameters = args.Parameters;
 			};
 
-			var products = northwind.Connection.Query<Product>(new { CategoryId = 1, SupplierId = 1 }, ticket: ticket).ToList();
+			var products = northwind.Connection.QueryAnonymous<Product>(new { CategoryId = 1, SupplierId = 1 }, ticket: ticket).ToList();
 
 			Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 							"UnitsOnOrder, ReorderLevel, Discontinued " +
@@ -592,8 +591,6 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				parameters = args.Parameters;
 			};
 
-			var sw = new Stopwatch();
-			sw.Start();
 			var employees = northwind.Connection.From<Product>("p")
 												.InnerJoin<OrderDetail>("od")
 												.On("p.ProductId", "od.ProductId")
@@ -604,37 +601,6 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 												.Where("e.EmployeeId", 1)
 												.Select<Employee>(ticket: ticket)
 												.ToList();
-			sw.Stop();
-			output.WriteLine(sw.ElapsedTicks.ToString());
-			
-			sw.Reset();
-			sw.Start();
-			employees = northwind.Connection.From<Product>("p")
-									.InnerJoin<OrderDetail>("od")
-									.On("p.ProductId", "od.ProductId")
-									.InnerJoin<Order>("o")
-									.On("o.OrderId", "od.OrderId")
-									.InnerJoin<Employee>("e")
-									.On("e.EmployeeId", "o.EmployeeId")
-									.Where("e.EmployeeId", 1)
-									.Select<Employee>(ticket: ticket)
-									.ToList();
-			sw.Stop();
-			output.WriteLine(sw.ElapsedTicks.ToString());
-			sw.Reset();
-			sw.Start();
-
-			string s = northwind.Connection.From<Product>("p")
-									.InnerJoin<OrderDetail>("od")
-									.On("p.ProductId", "od.ProductId")
-									.InnerJoin<Order>("o")
-									.On("o.OrderId", "od.OrderId")
-									.InnerJoin<Employee>("e")
-									.On("e.EmployeeId", "o.EmployeeId")
-									.Where("e.EmployeeId", 1)
-									.SelectAsSql<Employee>(ticket: ticket);
-			sw.Stop();
-			output.WriteLine(sw.ElapsedTicks.ToString());
 
 			Assert.Equal("SELECT e.EmployeeId, e.LastName, e.FirstName, e.Title, e.TitleOfCourtesy, e.Address, e.City, e.Region, " +
 							"e.PostalCode, e.Country, e.HomePhone, e.Extension, e.Photo, e.Notes, e.ReportsTo, e.PhotoPath " +
@@ -651,6 +617,31 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Assert.NotEmpty(employees);
 			Assert.True(!string.IsNullOrEmpty(employees[0].EmployeeId));
+		}
+
+		[Fact]
+		public void get_order_details_employing_having_clause_using_fluent_Select_returns_a_dictionary_of_order_ids_and_unit_prices()
+		{
+			var ticket = new Ticket("fluent select a dictionary of order ids and unit prices from order details using having");
+			string sql = null;
+
+			Jaunty.OnSelecting += (senders, args) => sql = args.Sql;
+
+			var dictionary = northwind.Connection.From<OrderDetail>()
+												 .GroupBy("OrderId")
+												 .Having("SUM(UnitPrice) > 10")
+												 .OrderBy("OrderId")
+												 .Select<dynamic>("OrderId, SUM(UnitPrice) AS Total")
+												 .ToDictionary(row => (int)row.OrderId, row => (decimal)row.Total);
+
+			Assert.Equal("SELECT OrderId, SUM(UnitPrice) AS Total " +
+						 "FROM \"Order Details\" " +
+						 "GROUP BY OrderId " +
+						 "HAVING SUM(UnitPrice) > 10 " +
+						 "ORDER BY OrderId;", sql);
+
+			Assert.NotEmpty(dictionary);
+			Assert.True(dictionary.Count > 0);
 		}
 	}
 }

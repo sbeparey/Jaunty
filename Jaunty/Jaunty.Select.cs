@@ -91,7 +91,7 @@ namespace Jaunty
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		/// <exception cref="ArgumentNullException">expression</exception>
-		public static IEnumerable<T> Query<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
+		public static IEnumerable<T> QueryAnonymous<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (nameValuePairs is null)
 			{
@@ -224,8 +224,8 @@ namespace Jaunty
 			if (groupBy is null)
 				throw new ArgumentNullException(nameof(groupBy));
 
-			string sql = ticket is null 
-				? ExtractSql<T>(groupBy, selectClause: selectClause) 
+			string sql = ticket is null
+				? ExtractSql<T>(groupBy, selectClause: selectClause)
 				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(groupBy, selectClause: selectClause));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
@@ -258,15 +258,17 @@ namespace Jaunty
 		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static IEnumerable<T> Select<T>(this OrderBy orderBy, IDbTransaction transaction = null, ITicket ticket = null)
+		public static IEnumerable<T> Select<T>(this OrderBy orderBy, string selectClause = null, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			if (orderBy is null)
 				throw new ArgumentNullException(nameof(orderBy));
 
-			string sql = ticket is null ? ExtractSql<T>(orderBy) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(orderBy));
+			string sql = ticket is null
+					   ? ExtractSql<T>(orderBy, selectClause: selectClause)
+					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(orderBy, selectClause: selectClause));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return SqlMapper.Query<T>(orderBy.Connection, sql, transaction: transaction);
+			return orderBy.Connection.Query<T>(sql: sql, transaction: transaction);
 		}
 
 		/// <summary>
@@ -276,12 +278,14 @@ namespace Jaunty
 		/// <param name="orderBy">OrderBy clause</param>
 		/// <param name="ticket"></param>
 		/// <returns>Returns <see cref="string"/></returns>
-		public static string SelectAsSql<T>(this OrderBy orderBy, ITicket ticket = null)
+		public static string SelectAsSql<T>(this OrderBy orderBy, string selectClause = null, ITicket ticket = null)
 		{
 			if (orderBy is null)
 				throw new ArgumentNullException(nameof(orderBy));
 
-			return ticket is null ? ExtractSql<T>(orderBy) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(orderBy));
+			return ticket is null
+					   ? ExtractSql<T>(orderBy, selectClause: selectClause)
+					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(orderBy, selectClause: selectClause));
 		}
 
 		/// <summary>
@@ -365,7 +369,7 @@ namespace Jaunty
 			if (fetchNext is null)
 				throw new ArgumentNullException(nameof(fetchNext));
 
-			var sql = ticket is null ? ExtractSql<T>(fetchNext): _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchNext));
+			var sql = ticket is null ? ExtractSql<T>(fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchNext));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return SqlMapper.Query<T>(fetchNext.Connection, sql, transaction: transaction);
@@ -386,15 +390,18 @@ namespace Jaunty
 			return ticket is null ? ExtractSql<T>(fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchNext));
 		}
 
-		// Todo: Complete
-		//public static IEnumerable<T> Select<T>(this HavingClause havingClause, string clause, IDbTransaction transaction = null, ITicket ticket = null)
-		//{
-		//	var sql = new StringBuilder();
-		//	BuildHaving(havingClause, GetType(typeof(T)), clause, sql);
-		//	var eventArgs = new SqlEventArgs { Sql = sql };
-		//	OnSelecting?.Invoke(ticket, eventArgs);
-		//	return havingClause.Connection.Query<T>(sql, null, transaction);
-		//}
+		public static IEnumerable<T> Select<T>(this Having having, string clause, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (having is null)
+				throw new ArgumentNullException(nameof(having));
+
+			var sql = ticket is null
+					? ExtractSql<T>(having, selectClause: clause)
+					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(having, selectClause: clause));
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return having.Connection.Query<T>(sql, null, transaction);
+		}
 
 		#endregion
 
@@ -457,13 +464,6 @@ namespace Jaunty
 			return orderBy;
 		}
 
-		private static OrderBy CreateOrderBy(Clause clause, string orderByColumn, SortOrder? sortOrder)
-		{
-			var orderBy = new OrderBy(clause);
-			orderBy.Add(orderByColumn, sortOrder);
-			return orderBy;
-		}
-
 		public static Limit Limit(this From from, int limit)
 		{
 			return new Limit(from, limit);
@@ -511,16 +511,12 @@ namespace Jaunty
 
 		private static GroupBy CreateGroupBy(Clause clause, params string[] columns)
 		{
-			var groupBy = new GroupBy(clause);
-			groupBy.Add(columns);
-			return groupBy;
+			return new GroupBy(clause, columns);
 		}
 
-		public static Having Having(this GroupBy groupBy, string raw)
+		public static Having Having(this GroupBy groupBy, string clause)
 		{
-			var having = new Having(groupBy);
-			having.Add(raw);
-			return having;
+			return new Having(groupBy, clause);
 		}
 
 		#region async
@@ -693,6 +689,13 @@ namespace Jaunty
 		#endregion
 
 		#region private methods
+
+		private static OrderBy CreateOrderBy(Clause clause, string orderByColumn, SortOrder? sortOrder)
+		{
+			var orderBy = new OrderBy(clause);
+			orderBy.Add(orderByColumn, sortOrder);
+			return orderBy;
+		}
 
 		private static string ExtractSql<T>(Clause clause, string alias = null, string selectClause = null)
 		{

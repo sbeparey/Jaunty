@@ -470,35 +470,26 @@ namespace Jaunty
 
 	public class GroupBy : Clause
 	{
-		public GroupBy(Clause clause) : base(clause)
+		public GroupBy(Clause clause, params string[] columns) : base(clause)
 		{
+			GroupBys ??= new List<string>(columns);
 		}
 
 		internal IList<string> GroupBys { get; private set; }
-
-		internal void Add(params string[] columns)
-		{
-			GroupBys = GroupBys ?? new List<string>(columns);
-		}
 
 		internal override string Sql => $"{PreviousClause.Sql} GROUP BY {string.Join(", ", GroupBys)}";
 	}
 
 	public class Having : Clause
 	{
-		public Having(Clause clause) : base(clause)
+		public Having(Clause clause, string text) : base(clause)
 		{
-			Havings = new List<string>();
+			Text = text;
 		}
 
-		internal IList<string> Havings { get; private set; }
+		internal string Text { get; }
 
-		internal void Add(params string[] havings)
-		{
-			// todo 
-		}
-
-		internal override string Sql => "";
+		internal override string Sql => $"{PreviousClause.Sql} HAVING {Text}";
 	}
 
 	public class OrderBy : Clause
