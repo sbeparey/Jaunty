@@ -155,6 +155,11 @@ namespace Jaunty
 			Count = count;
 		}
 
+		public Top(Clause clause, int count) : base(clause)
+		{
+			Count = count;
+		}
+
 		internal int Count { get; }
 
 		internal override string Sql

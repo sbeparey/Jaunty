@@ -4,7 +4,7 @@
 	{
 		public string RegionId { get; set; }
 
-		[Column("RegionDescription")]
+		[Column("Description")]
 		public string Name { get; set; }
 	}
 }

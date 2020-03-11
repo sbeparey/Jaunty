@@ -2,6 +2,7 @@
 
 using Pluralize.NET;
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -14,14 +15,23 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 	{
 		private readonly ITestOutputHelper output;
 		private readonly Northwind northwind;
+		IPluralize pluralize = new Pluralizer();
 
 		public SelectTests(ITestOutputHelper output, Northwind northwind)
 		{
 			this.output = output;
 			Jaunty.SqlDialect = Jaunty.Dialects.SqlServer;
 			this.northwind = northwind;
-			IPluralize pluralize = new Pluralizer();
-			Jaunty.TableNameMapper += type => type == typeof(OrderDetail) ? "\"Order Details\"" : pluralize.Pluralize(type.Name);
+			Jaunty.TableNameMapper += GetEntityName;
+		}
+
+		private string GetEntityName(Type type)
+		{
+			if (type == typeof(OrderDetail))
+				return "\"Order Details\"";
+			if (type == typeof(Region))
+				return "Region";
+			return pluralize.Pluralize(type.Name);
 		}
 
 		[Fact]
@@ -564,6 +574,41 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 			Assert.NotEmpty(dictionary);
 			Assert.True(dictionary.Count > 0);
+		}
+
+		[Fact]
+		public void get_with_distinct_using_fluent_Select_returns_a_collection_of_region()
+		{
+			var ticket = new Ticket("fluent distinct select all regions");
+			string sql = null;
+
+			Jaunty.OnSelecting += (sends, args) => sql = args.Sql;
+
+			var regions = northwind.Connection.Distinct()
+											  .From<Region>()
+											  .Select<Region>(ticket: ticket);
+
+			Assert.Equal("SELECT DISTINCT RegionId, Description FROM Region;", sql);
+			Assert.NotEmpty(regions);
+		}
+
+		[Fact]
+		public void get_with_distinct_and_top_using_fluent_Select_returns_a_collection_of_customers()
+		{
+			var ticket = new Ticket("fluent select distinct top 20 customers");
+			string sql = null;
+
+			Jaunty.OnSelecting += (sends, args) => sql = args.Sql;
+
+			var regions = northwind.Connection.Distinct()
+											  .Top(20)
+											  .From<Customer>()
+											  .Select<Customer>(ticket: ticket);
+
+			Assert.Equal("SELECT DISTINCT TOP 20 CustomerId, CompanyName, ContactName, ContactTitle, Address, City, Region, " +
+							"PostalCode, Country, Phone, Fax " +
+						 "FROM Customers;", sql);
+			Assert.NotEmpty(regions);
 		}
 	}
 }

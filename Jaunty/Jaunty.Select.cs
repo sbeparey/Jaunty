@@ -404,15 +404,29 @@ namespace Jaunty
 		}
 
 		#endregion
+		public static Distinct Distinct(this IDbConnection connection)
+		{
+			return new Distinct(connection);
+		}
 
 		public static Top Top(this IDbConnection connection, int top)
 		{
 			return new Top(connection, top);
 		}
 
+		public static Top Top(this Distinct distinct, int top)
+		{
+			return new Top(distinct, top);
+		}
+
 		public static From From<T>(this IDbConnection connection, string alias = null)
 		{
 			return new From(connection, GetType(typeof(T)), alias);
+		}
+
+		public static From From<T>(this Distinct distinct, string alias = null)
+		{
+			return new From(distinct, GetType(typeof(T)), alias);
 		}
 
 		public static From From<T>(this Top top, string alias = null)
