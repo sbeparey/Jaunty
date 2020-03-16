@@ -582,7 +582,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			var ticket = new Ticket("fluent distinct select all regions");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sends, args) => sql = args.Sql;
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var regions = northwind.Connection.Distinct()
 											  .From<Region>()
@@ -598,7 +598,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			var ticket = new Ticket("fluent select distinct top 20 customers");
 			string sql = null;
 
-			Jaunty.OnSelecting += (sends, args) => sql = args.Sql;
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
 
 			var regions = northwind.Connection.Distinct()
 											  .Top(20)
@@ -609,6 +609,22 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 							"PostalCode, Country, Phone, Fax " +
 						 "FROM Customers;", sql);
 			Assert.NotEmpty(regions);
+		}
+
+		[Fact]
+		public void get_many_to_many_using_fluent_Select_returns_a_lookup_collection_of_employee_territories()
+		{
+			var ticket = new Ticket("fluent select employee territories");
+			string sql = null;
+
+			Jaunty.OnSelecting += (sender, args) => sql = args.Sql;
+
+			var lookup = northwind.Connection.From<EmployeeTerritory>()
+											 .Select<EmployeeTerritory>(ticket: ticket)
+											 .ToLookup(x => x.EmployeeId, x => x.TerritoryId);
+
+			Assert.Equal("SELECT EmployeeId, TerritoryId FROM EmployeeTerritories;", sql);
+			Assert.NotEmpty(lookup);
 		}
 	}
 }
