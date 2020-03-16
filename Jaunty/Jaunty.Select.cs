@@ -16,7 +16,6 @@ namespace Jaunty
 	public static partial class Jaunty
 	{
 		private static readonly ConcurrentDictionary<RuntimeTypeHandle, string> getQueriesCache = new ConcurrentDictionary<RuntimeTypeHandle, string>();
-		private static readonly ConcurrentDictionary<RuntimeTypeHandle, string> getAllQueriesCache = new ConcurrentDictionary<RuntimeTypeHandle, string>();
 
 		public static event EventHandler<SqlEventArgs> OnSelecting;
 
@@ -35,7 +34,23 @@ namespace Jaunty
 			string sql = ticket is null ? BuildSelectAllSql<T>() : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectAllSql<T>());
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return SqlMapper.Query<T>(connection, sql, transaction: transaction);
+			return connection.Query<T>(sql: sql, transaction: transaction);
+		}
+
+		/// <summary>
+		/// Gets all of the rows in a table asynchronously.
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="connection">The connection to query on.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <returns>Returns <see cref="IEnumerable{T}"/>.</returns>
+		public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			string sql = ticket is null ? BuildSelectAllSql<T>() : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectAllSql<T>());
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await connection.QueryAsync<T>(sql, transaction: transaction).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -55,6 +70,26 @@ namespace Jaunty
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return connection.QuerySingleOrDefault<T>(sql, parameters, transaction);
+		}
+
+
+		/// <summary>
+		/// Gets an entity by the specified key asynchronously.
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <typeparam name="TKey">The primary key type.</typeparam>
+		/// <param name="connection">The connection to query on.</param>
+		/// <param name="key">The key.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <returns>Returns <see cref="T"/></returns>
+		public static async Task<T> GetAsync<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			var parameters = new Dictionary<string, object>();
+			string sql = ticket is null ? BuildSelectAllSql<T>() : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T, TKey>(key, parameters));
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await connection.QuerySingleOrDefaultAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -82,6 +117,30 @@ namespace Jaunty
 		}
 
 		/// <summary>
+		/// Gets entities by the lambda expression asynchronously.
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="connection">The connection to query on.</param>
+		/// <param name="expression">The key.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
+		/// <exception cref="ArgumentNullException">expression</exception>
+		public static async Task<IEnumerable<T>> QueryAsync<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (expression is null)
+			{
+				throw new ArgumentNullException(nameof(expression));
+			}
+
+			var parameters = new Dictionary<string, object>();
+			string sql = ticket is null ? BuildSelectSql(expression, parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(expression, parameters));
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await connection.QueryAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
+		}
+
+		/// <summary>
 		/// Gets entities by an anonymous object.
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table or view.</typeparam>
@@ -105,6 +164,31 @@ namespace Jaunty
 			return connection.Query<T>(sql, nameValuePairs, transaction);
 		}
 
+		/// <summary>
+		/// Gets entities by an anonymous object asynchronously.
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="connection">The connection to query on.</param>
+		/// <param name="nameValuePairs">An anonymous object.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
+		/// <exception cref="ArgumentNullException">expression</exception>
+		public static async Task<IEnumerable<T>> QueryAnonymousAsync<T>(this IDbConnection connection, object nameValuePairs,
+			IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (nameValuePairs is null)
+			{
+				throw new ArgumentNullException(nameof(nameValuePairs));
+			}
+
+			var parameters = nameValuePairs.ToDictionary();
+			string sql = ticket is null ? BuildSelectSql<T>(parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(parameters));
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await connection.QueryAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
+		}
+
 		#endregion
 
 		#region fluent select
@@ -126,6 +210,25 @@ namespace Jaunty
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return from.Connection.Query<T>(sql, null, transaction);
+		}
+
+		/// <summary>
+		/// Selects on From asynchronously 
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="from">From<T></param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this From from, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (from is null)
+				throw new ArgumentNullException(nameof(from));
+
+			string sql = ticket is null ? ExtractSql<T>(from) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(from));
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await from.Connection.QueryAsync<T>(sql, null, transaction).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -158,7 +261,26 @@ namespace Jaunty
 			string sql = ticket is null ? ExtractSql<T>(joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(joinOn));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return SqlMapper.Query<T>(joinOn.Connection, sql, transaction: transaction);
+			return joinOn.Connection.Query<T>(sql, transaction: transaction);
+		}
+
+		/// <summary>
+		/// Selects on Join asynchronously
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="joinOn">InnerJoin<T> or LeftOuterJoin<T> or RightOuterJoin<T></param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this JoinOn joinOn, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (joinOn is null)
+				throw new ArgumentNullException(nameof(joinOn));
+
+			string sql = ticket is null ? ExtractSql<T>(joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(joinOn));
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await joinOn.Connection.QueryAsync<T>(sql, transaction: transaction).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -196,6 +318,26 @@ namespace Jaunty
 		}
 
 		/// <summary>
+		/// Selects on Where asynchronously
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="conditionalClause">Where clause</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (condition is null)
+				throw new ArgumentNullException(nameof(condition));
+
+			string sql = ticket is null ? ExtractSql<T>(condition) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(condition));
+			var parameters = condition.GetParameters();
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await condition.Connection.QueryAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
+		}
+
+		/// <summary>
 		/// Selects on Condition
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table or view.</typeparam>
@@ -230,6 +372,27 @@ namespace Jaunty
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return groupBy.Connection.Query<T>(sql, null, transaction);
+		}
+
+		/// <summary>
+		/// Selects on GroupBy asynchronously 
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="groupBy">GroupBy clause</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this GroupBy groupBy, string selectClause, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (groupBy is null)
+				throw new ArgumentNullException(nameof(groupBy));
+
+			string sql = ticket is null
+				? ExtractSql<T>(groupBy, selectClause: selectClause)
+				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(groupBy, selectClause: selectClause));
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await groupBy.Connection.QueryAsync<T>(sql, null, transaction).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -272,6 +435,27 @@ namespace Jaunty
 		}
 
 		/// <summary>
+		/// Selects on OrderBy asynchronously
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="orderByClause">OrderBy clause</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this OrderBy orderBy, string selectClause = null, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (orderBy is null)
+				throw new ArgumentNullException(nameof(orderBy));
+
+			string sql = ticket is null
+					   ? ExtractSql<T>(orderBy, selectClause: selectClause)
+					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(orderBy, selectClause: selectClause));
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await orderBy.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
+		}
+
+		/// <summary>
 		/// Select on OrderBy
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table or view.</typeparam>
@@ -304,7 +488,26 @@ namespace Jaunty
 			var sql = ticket is null ? ExtractSql<T>(limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(limit));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return SqlMapper.Query<T>(limit.Connection, sql, transaction: transaction);
+			return limit.Connection.Query<T>(sql: sql, transaction: transaction);
+		}
+
+		/// <summary>
+		/// Selects on Limit
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="limit"></param>
+		/// <param name="transaction"></param>
+		/// <param name="ticket"></param>
+		/// <returns></returns>
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this Limit limit, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (limit is null)
+				throw new ArgumentNullException(nameof(limit));
+
+			var sql = ticket is null ? ExtractSql<T>(limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(limit));
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await limit.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -338,7 +541,26 @@ namespace Jaunty
 			var sql = ticket is null ? ExtractSql<T>(fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchFirst));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return SqlMapper.Query<T>(fetchFirst.Connection, sql, transaction: transaction);
+			return fetchFirst.Connection.Query<T>(sql: sql, transaction: transaction);
+		}
+
+		/// <summary>
+		/// Selects on FetchFirst
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="fetchFirst"></param>
+		/// <param name="transaction"></param>
+		/// <param name="ticket"></param>
+		/// <returns></returns>
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this FetchFirst fetchFirst, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (fetchFirst is null)
+				throw new ArgumentNullException(nameof(fetchFirst));
+
+			var sql = ticket is null ? ExtractSql<T>(fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchFirst));
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await fetchFirst.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -372,7 +594,26 @@ namespace Jaunty
 			var sql = ticket is null ? ExtractSql<T>(fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchNext));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
-			return SqlMapper.Query<T>(fetchNext.Connection, sql, transaction: transaction);
+			return fetchNext.Connection.Query<T>(sql: sql, transaction: transaction);
+		}
+
+		/// <summary>
+		/// Selects on FetchNext
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="fetchNext"></param>
+		/// <param name="transaction"></param>
+		/// <param name="ticket"></param>
+		/// <returns></returns>
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this FetchNext fetchNext, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (fetchNext is null)
+				throw new ArgumentNullException(nameof(fetchNext));
+
+			var sql = ticket is null ? ExtractSql<T>(fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchNext));
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await fetchNext.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -403,7 +644,21 @@ namespace Jaunty
 			return having.Connection.Query<T>(sql, null, transaction);
 		}
 
+		public static async Task<IEnumerable<T>> SelectAsync<T>(this Having having, string clause, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (having is null)
+				throw new ArgumentNullException(nameof(having));
+
+			var sql = ticket is null
+					? ExtractSql<T>(having, selectClause: clause)
+					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(having, selectClause: clause));
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return await having.Connection.QueryAsync<T>(sql, null, transaction).ConfigureAwait(false);
+		}
+
 		#endregion
+
 		public static Distinct Distinct(this IDbConnection connection)
 		{
 			return new Distinct(connection);
@@ -532,175 +787,6 @@ namespace Jaunty
 		{
 			return new Having(groupBy, clause);
 		}
-
-		#region async
-
-		/// <summary>
-		/// Gets all of the rows in a table asynchronously.
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table or view.</typeparam>
-		/// <param name="connection">The connection to query on.</param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <see cref="IEnumerable{T}"/>.</returns>
-		public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			string sql = BuildSelectAllSql<T>();
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return await connection.QueryAsync<T>(sql, transaction: transaction);
-		}
-
-		/// <summary>
-		/// Gets an entity by the specified key asynchronously.
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table or view.</typeparam>
-		/// <typeparam name="TKey">The primary key type.</typeparam>
-		/// <param name="connection">The connection to query on.</param>
-		/// <param name="key">The key.</param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <see cref="T"/></returns>
-		public static async Task<T> GetAsync<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			var parameters = new Dictionary<string, object>();
-			string sql = BuildSelectSql<T, TKey>(key, parameters);
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return await connection.QuerySingleOrDefaultAsync<T>(sql, parameters, transaction);
-		}
-
-		/// <summary>
-		/// Gets entities by the lambda expression asynchronously.
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table or view.</typeparam>
-		/// <param name="connection">The connection to query on.</param>
-		/// <param name="expression">The key.</param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		/// <exception cref="ArgumentNullException">expression</exception>
-		public static async Task<IEnumerable<T>> QueryAsync<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			if (expression is null)
-			{
-				throw new ArgumentNullException(nameof(expression));
-			}
-
-			var parameters = new Dictionary<string, object>();
-			string sql = BuildSelectSql(expression, parameters);
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return await connection.QueryAsync<T>(sql, parameters, transaction);
-		}
-
-		/// <summary>
-		/// Gets entities by an anonymous object asynchronously.
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table or view.</typeparam>
-		/// <param name="connection">The connection to query on.</param>
-		/// <param name="nameValuePairs">An anonymous object.</param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		/// <exception cref="ArgumentNullException">expression</exception>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this IDbConnection connection, object nameValuePairs,
-			IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			if (nameValuePairs is null)
-			{
-				throw new ArgumentNullException(nameof(nameValuePairs));
-			}
-
-			var parameters = nameValuePairs.ToDictionary();
-			string sql = BuildSelectSql<T>(parameters);
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return await connection.QueryAsync<T>(sql, parameters, transaction);
-		}
-
-		/// <summary>
-		/// Selects on From asynchronously 
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table or view.</typeparam>
-		/// <param name="fromClause">From<T></param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this From fromClause, IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			string sql = ExtractSql<T>(fromClause);
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return await fromClause.Connection.QueryAsync<T>(sql, null, transaction);
-		}
-
-		/// <summary>
-		/// Selects on Join asynchronously
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table or view.</typeparam>
-		/// <param name="joinOn">InnerJoin<T> or LeftOuterJoin<T> or RightOuterJoin<T></param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this JoinOn joinOn, IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			var sql = ExtractSql<T>(joinOn);
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return await joinOn.Connection.QueryAsync<T>(sql, transaction: transaction);
-		}
-
-		/// <summary>
-		/// Selects on Where asynchronously
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table or view.</typeparam>
-		/// <param name="conditionalClause">Where clause</param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this Condition conditionalClause, IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			var sql = ExtractSql<T>(conditionalClause);
-			var parameters = conditionalClause.GetParameters();
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return await conditionalClause.Connection.QueryAsync<T>(sql, parameters, transaction);
-		}
-
-		/// <summary>
-		/// Selects on GroupBy asynchronously 
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table or view.</typeparam>
-		/// <param name="groupByClause">GroupBy clause</param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this GroupBy groupByClause, string clause, IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			var sql = ExtractSql<T>(groupByClause);
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return await groupByClause.Connection.QueryAsync<T>(sql, null, transaction);
-		}
-
-		/// <summary>
-		/// Selects on OrderBy asynchronously
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table or view.</typeparam>
-		/// <param name="orderByClause">OrderBy clause</param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
-		public static async Task<IEnumerable<T>> SelectAsync<T>(this OrderBy orderByClause, IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			var sql = ExtractSql<T>(orderByClause);
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return await orderByClause.Connection.QueryAsync<T>(sql, transaction: transaction);
-		}
-
-		#endregion
 
 		#region private methods
 
