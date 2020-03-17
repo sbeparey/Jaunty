@@ -1,7 +1,8 @@
 ﻿// ﷽
 
+using Dapper;
+
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -9,14 +10,10 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
-using Dapper;
-
 namespace Jaunty
 {
 	public static partial class Jaunty
 	{
-		private static readonly ConcurrentDictionary<RuntimeTypeHandle, string> getQueriesCache = new ConcurrentDictionary<RuntimeTypeHandle, string>();
-
 		public static event EventHandler<SqlEventArgs> OnSelecting;
 
 		#region regular select
@@ -65,13 +62,12 @@ namespace Jaunty
 		/// <returns>Returns <see cref="T"/></returns>
 		public static T Get<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			var parameters = new Dictionary<string, object>();
-			string sql = ticket is null ? BuildSelectAllSql<T>() : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T, TKey>(key, parameters));
+			var parameters = KeyToParameter<T, TKey>(key);
+			string sql = ticket is null ? BuildSelectSql<T>(parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(parameters));
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return connection.QuerySingleOrDefault<T>(sql, parameters, transaction);
 		}
-
 
 		/// <summary>
 		/// Gets an entity by the specified key asynchronously.
@@ -85,8 +81,8 @@ namespace Jaunty
 		/// <returns>Returns <see cref="T"/></returns>
 		public static async Task<T> GetAsync<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			var parameters = new Dictionary<string, object>();
-			string sql = ticket is null ? BuildSelectAllSql<T>() : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T, TKey>(key, parameters));
+			var parameters = KeyToParameter<T, TKey>(key);
+			string sql = ticket is null ? BuildSelectSql<T>(parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(parameters));
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await connection.QuerySingleOrDefaultAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
@@ -109,8 +105,8 @@ namespace Jaunty
 				throw new ArgumentNullException(nameof(expression));
 			}
 
-			var parameters = new Dictionary<string, object>();
-			string sql = ticket is null ? BuildSelectSql(expression, parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(expression, parameters));
+			var parameters = ExpressionToParameters(expression);
+			string sql = ticket is null ? BuildSelectSql(expression) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(expression));
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return connection.Query<T>(sql, parameters, transaction);
@@ -133,8 +129,8 @@ namespace Jaunty
 				throw new ArgumentNullException(nameof(expression));
 			}
 
-			var parameters = new Dictionary<string, object>();
-			string sql = ticket is null ? BuildSelectSql(expression, parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(expression, parameters));
+			var parameters = ExpressionToParameters(expression);
+			string sql = ticket is null ? BuildSelectSql(expression) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(expression));
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await connection.QueryAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
@@ -871,7 +867,7 @@ namespace Jaunty
 			return sql;
 		}
 
-		private static string BuildSelectSql<T, TKey>(TKey key, IDictionary<string, object> parameters)
+		private static Dictionary<string, object> KeyToParameter<T, TKey>(TKey key)
 		{
 			Type type = GetType(typeof(T));
 			var keyColumnsList = GetKeysCache(type).Keys.ToList();
@@ -886,46 +882,58 @@ namespace Jaunty
 				throw new ArgumentException("This entity has more than one key columns.");
 			}
 
+			var parameters = new Dictionary<string, object>();
 			parameters.Add(keyColumnsList[0], key);
-
-			if (getQueriesCache.TryGetValue(type.TypeHandle, out string s))
-			{
-				return s.Replace("{{where}}", keyColumnsList.ToWhereClause());
-			}
-
-			string sqlWithoutWhere = SqlTemplates.SelectWhere.Trim().Replace("{{columns}}", GetColumnsCache(type).Keys.ToList().ToClause())
-																		.Replace("{{table}}", GetTypeName(type));
-			getQueriesCache[type.TypeHandle] = sqlWithoutWhere;
-			return sqlWithoutWhere.Replace("{{where}}", keyColumnsList.ToWhereClause());
+			return parameters;
 		}
 
-		private static string BuildSelectSql<T>(Expression<Func<T, bool>> expression, IDictionary<string, object> parameters)
+		private static Dictionary<string, object> ExpressionToParameters<T>(Expression<Func<T, bool>> expression)
+		{
+			if (expression is null)
+				throw new ArgumentNullException(nameof(expression));
+
+			Type type = GetType(typeof(T));
+			var dictionary = new Dictionary<string, object>();
+			expression.Body.WalkThrough((name, _, value) => dictionary.AddIf(name != null, name, value));
+			return dictionary;
+		}
+
+		private static string BuildSelectSql<T>(Expression<Func<T, bool>> expression)
 		{
 			Type type = GetType(typeof(T));
-			var whereClause = new StringBuilder();
-			expression.Body.WalkThrough((n, o, v) => ExtractClause(n, o, v, whereClause, parameters.Add));
-
-			if (getQueriesCache.TryGetValue(type.TypeHandle, out string s))
+			var columns = GetColumnsCache(type).Keys.ToList();
+			var where = new StringBuilder();
+			expression.Body.WalkThrough((name, oper, _) =>
 			{
-				return s.Replace("{{where}}", whereClause.ToString());
-			}
+				where.AppendIf(name != null, $"{name} {oper} @{name}");
+				where.AppendIf(name is null, $" {oper} ");
+			});
 
-			string sqlWithoutWhere = SqlTemplates.SelectWhere.Trim().Replace("{{columns}}", GetColumnsCache(type).Keys.ToList().ToClause())
-																		.Replace("{{table}}", GetTypeName(type));
-			getQueriesCache[type.TypeHandle] = sqlWithoutWhere;
-			return sqlWithoutWhere.Replace("{{where}}", whereClause.ToString());
+			return SqlTemplates.SelectWhere.Replace("{{columns}}", columns.ToClause(), StringComparison.OrdinalIgnoreCase)
+										   .Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+										   .Replace("{{where}}", where.ToString(), StringComparison.OrdinalIgnoreCase);
 		}
 
 		private static string BuildSelectSql<T>(IDictionary<string, object> parameters)
 		{
-			// Todo: cache?
 			Type type = GetType(typeof(T));
-			var columnsList = GetColumnsCache(type).Keys.ToList();
-			string sqlWithoutWhere = SqlTemplates.SelectWhere.Trim().Replace("{{columns}}", columnsList.ToClause())
-																		.Replace("{{table}}", GetTypeName(type));
-			getQueriesCache[type.TypeHandle] = sqlWithoutWhere;
-			return sqlWithoutWhere.Replace("{{where}}", parameters.ToWhereClause());
+			var columns = GetColumnsCache(type).Keys.ToList();
+			
+			return SqlTemplates.SelectWhere.Replace("{{columns}}", columns.ToClause(), StringComparison.OrdinalIgnoreCase)
+										   .Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+										   .Replace("{{where}}", parameters.ToWhereClause(), StringComparison.OrdinalIgnoreCase);
 		}
+
+		//private static string BuildSelectSql<T>()
+		//{
+		//	Type type = GetType(typeof(T));
+		//	var keys = GetKeysCache(type).Keys.ToList();
+		//	var columns = GetColumnsCache(type).Keys.ToList().ToClause();
+
+		//	return SqlTemplates.SelectWhere.Replace("{{columns}}", columns, StringComparison.OrdinalIgnoreCase)
+		//								   .Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+		//								   .Replace("{{where}}", keys.ToWhereClause(), StringComparison.OrdinalIgnoreCase);
+		//}
 
 		#endregion
 	}

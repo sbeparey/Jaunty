@@ -41,6 +41,13 @@ namespace Jaunty
 			return builder.Insert(index, text);
 		}
 
+		internal static Dictionary<TKey, TValue> AddIf<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, bool condition, TKey key, TValue value)
+		{
+			if (condition)
+				dictionary.Add(key, value);
+			return dictionary;
+		}
+
 		internal static bool IsNullOrEmpty(this string text)
 		{
 			return string.IsNullOrEmpty(text);

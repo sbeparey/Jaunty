@@ -6,7 +6,7 @@
 		internal const string SelectDistinct = "SELECT DISTINCT {{columns}} FROM {{table}}";
 		internal const string SelectTop = "SELECT {{top}} {{columns}} FROM {{table}}";
 		internal const string SelectDistinctTop = "SELECT DISTINCT {{top}} {{columns}} FROM {{table}}";
-		internal const string SelectWhere = "SELECT {{columns}} FROM {{table}} WHERE {{where}}; ";
+		internal const string SelectWhere = "SELECT {{columns}} FROM {{table}} WHERE {{where}};";
 		//internal const string Select = "SELECT {{columns}} FROM {{table}} GROUP BY {{groupby}} HAVING {{having}} ORDER BY {{orderby}}";
 
 		internal const string Insert = "INSERT INTO {{table}} ({{columns}}) VALUES ({{parameters}})";

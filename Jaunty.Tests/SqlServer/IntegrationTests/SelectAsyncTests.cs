@@ -11,6 +11,7 @@ using Xunit.Abstractions;
 
 namespace Jaunty.Tests.SqlServer.IntegrationTests
 {
+	[Collection("sql server select tests")]
 	public class SelectAsyncTests : IClassFixture<Northwind>
 	{
 		private readonly ITestOutputHelper output;
