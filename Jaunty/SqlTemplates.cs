@@ -13,10 +13,10 @@
 		internal const string InsertByUnion = "INSERT INTO {{table}} ({{columns}}) \n" +
 											   "{{select}}";
 
-		internal const string UpdateWhere = "UPDATE {{table}} SET {{columns}} WHERE {{where}}; ";
+		internal const string UpdateWhere = "UPDATE {{table}} SET {{columns}} WHERE {{where}};";
 
 		//internal const string DeleteAll = "DELETE FROM {{table}}";
-		internal const string DeleteWhere = "DELETE FROM {{table}} WHERE {{where}}; ";
+		internal const string DeleteWhere = "DELETE FROM {{table}} WHERE {{where}};";
 
 		internal static class SqlServer
 		{

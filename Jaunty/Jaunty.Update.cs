@@ -160,10 +160,10 @@ namespace Jaunty
 			var keyColumnsList = conditionClause is null ? GetKeysCache(type).Keys.ToList() : null;
 			columnsList?.Reduce(keyColumnsList);
 			string setClause = conditionClause is null ? columnsList.ToSetClause() : conditionClause.GetSetClause();
-			string whereClause = conditionClause is null ? keyColumnsList.ToWhereClause() : conditionClause.Sql;
-			return SqlTemplates.UpdateWhere.Trim().Replace("{{table}}", GetTypeName(type))
-													  .Replace("{{columns}}", setClause)
-													  .Replace("{{where}}", whereClause);
+			string whereClause = conditionClause is null ? keyColumnsList.ToWhereClause() : conditionClause.ToSql();
+			return SqlTemplates.UpdateWhere.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+										   .Replace("{{columns}}", setClause, StringComparison.OrdinalIgnoreCase)
+										   .Replace("{{where}}", whereClause, StringComparison.OrdinalIgnoreCase);
 		}
 	}
 }

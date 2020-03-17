@@ -796,7 +796,7 @@ namespace Jaunty
 		private static string ExtractSql<T>(Clause clause, string alias = null, string selectClause = null)
 		{
 			var type = GetType(typeof(T));
-			string sql = clause.Sql;
+			string sql = clause.ToSql();
 			string selectedAlias = alias;
 
 			bool hasJoin = false;

@@ -207,15 +207,15 @@ namespace Jaunty
 		{
 			Type type = GetType(typeof(T));
 			var keyColumnsList = GetColumnsCache(type).Keys.ToList();
-			return SqlTemplates.DeleteWhere.Trim().Replace("{{table}}", GetTypeName(type))
-													  .Replace("{{where}}", keyColumnsList.ToWhereClause());
+			return SqlTemplates.DeleteWhere.Replace("{{table}}", GetTypeName(type))
+												.Replace("{{where}}", keyColumnsList.ToWhereClause());
 		}
 
 		private static string BuildDeleteSql<T>(IDictionary<string, object> parameters)
 		{
 			Type type = GetType(typeof(T));
 			string tableName = GetTypeName(type);
-			return SqlTemplates.DeleteWhere.Trim().Replace("{{table}}", tableName)
+			return SqlTemplates.DeleteWhere.Replace("{{table}}", tableName)
 													  .Replace("{{where}}", parameters.ToWhereClause());
 		}
 
@@ -225,8 +225,8 @@ namespace Jaunty
 			string tableName = GetTypeName(type);
 			string whereClause = conditionalClause is null
 				? GetKeysCache(type).Keys.ToList().ToWhereClause()
-				: conditionalClause.Sql;
-			return SqlTemplates.DeleteWhere.Trim().Replace("{{table}}", tableName)
+				: conditionalClause.ToSql();
+			return SqlTemplates.DeleteWhere.Replace("{{table}}", tableName)
 													  .Replace("{{where}}", whereClause);
 		}
 
@@ -235,7 +235,7 @@ namespace Jaunty
 			Type type = GetType(typeof(T));
 			var whereClause = new StringBuilder();
 			expression.Body.WalkThrough((n, o, v) => ExtractClause(n, o, v, whereClause, parameters.Add));
-			return SqlTemplates.DeleteWhere.Trim().Replace("{{table}}", GetTypeName(type))
+			return SqlTemplates.DeleteWhere.Replace("{{table}}", GetTypeName(type))
 													  .Replace("{{where}}", whereClause.ToString());
 		}
 	}

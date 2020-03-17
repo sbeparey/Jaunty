@@ -68,88 +68,26 @@ namespace Jaunty
 		internal IDbConnection Connection { get; }
 		internal Clause PreviousClause { get; set; }
 
-		internal abstract string Sql { get; }
+		internal abstract string ToSql();
 	}
-
-	//public class Select : Clause
-	//{
-	//	private string sql;
-
-	//	public Select(IDbConnection connection, Type entity, string alias = null)
-	//		: base(connection)
-	//	{
-	//		Entity = entity ?? throw new ArgumentNullException(nameof(entity));
-	//		Alias = alias;
-	//	}
-
-	//	public Select(IDbConnection connection, string clause)
-	//		: base(connection)
-	//	{
-	//		Clause = clause ?? throw new ArgumentNullException(nameof(clause));
-	//	}
-
-	//	internal Type Entity { get; }
-	//	internal string Alias { get; private set; }
-	//	internal string Clause { get; }
-	//	internal bool FullyQualify { get; set; }
-
-	//	internal override string Sql
-	//	{
-	//		get
-	//		{
-	//			if (sql.IsNullOrEmpty())
-	//			{
-	//				sql = Clause.IsNullOrWhiteSpace() ? $"SELECT {GetColumns()} " : $"SELECT {Clause} ";
-	//			}
-
-	//			return sql;
-	//		}
-	//	}
-
-	//	private string GetColumns()
-	//	{
-	//		var columnNames = new List<string>(GetColumnsCache(Entity).Keys);
-
-	//		if (!FullyQualify)
-	//		{
-	//			return string.Join(", ", columnNames);
-	//		}
-
-	//		Alias ??= GetTypeName(Entity);
-	//		var prependedColumns = columnNames.Prepend(Alias + ".");
-	//		return string.Join(", ", prependedColumns);
-	//	}
-	//}
 
 	public class Distinct : Clause
 	{
-		private string sql;
-
 		public Distinct(IDbConnection connection)
-			:base(connection)
+			: base(connection)
 		{
 			if (connection is null)
 				throw new ArgumentNullException(nameof(connection));
 		}
 
-		internal override string Sql
+		internal override string ToSql()
 		{
-			get
-			{
-				if (sql.IsNullOrEmpty())
-				{
-					sql = "DISTINCT";
-				}
-
-				return sql;
-			}
+			return "DISTINCT";
 		}
 	}
 
 	public class Top : Clause
 	{
-		private string sql;
-
 		public Top(IDbConnection connection, int count) : base(connection)
 		{
 			Count = count;
@@ -162,26 +100,14 @@ namespace Jaunty
 
 		internal int Count { get; }
 
-		internal override string Sql
+		internal override string ToSql()
 		{
-			get
-			{
-				if (sql.IsNullOrEmpty())
-				{
-					sql = PreviousClause != null
-						? $"{PreviousClause.Sql} TOP {Count}"
-						: $"TOP {Count}";
-				}
-
-				return sql;
-			}
+			return PreviousClause != null ? $"{PreviousClause.ToSql()} TOP {Count}" : $"TOP {Count}";
 		}
 	}
 
 	public class From : Clause
 	{
-		private string sql;
-
 		public From(IDbConnection connection, Type entity, string alias = null)
 			: base(connection)
 		{
@@ -199,19 +125,11 @@ namespace Jaunty
 		internal string Name => GetTypeName(Entity);
 		internal string Alias { get; }
 
-		internal override string Sql
+		internal override string ToSql()
 		{
-			get
-			{
-				if (sql.IsNullOrEmpty())
-				{
-					sql = PreviousClause != null
-						? $"{PreviousClause.Sql} FROM {Name}{(Alias.NotNullOrWhiteSpace() ? " " + Alias : "")}"
+			return PreviousClause != null
+						? $"{PreviousClause.ToSql()} FROM {Name}{(Alias.NotNullOrWhiteSpace() ? " " + Alias : "")}"
 						: $"FROM {Name}{(Alias.NotNullOrWhiteSpace() ? " " + Alias : "")}";
-				}
-
-				return sql;
-			}
 		}
 	}
 
@@ -223,7 +141,6 @@ namespace Jaunty
 			Entity = entity ?? throw new ArgumentNullException(nameof(entity));
 			Alias = alias;
 			JoinType = joinType;
-			//SetFullyQualify(true);
 		}
 
 		internal Type Entity { get; }
@@ -231,20 +148,10 @@ namespace Jaunty
 		internal string Alias { get; }
 		internal JoinType JoinType { get; }
 
-		internal override string Sql => $"{PreviousClause.Sql} {JoinType.ToSqlString()} {Name}{(Alias.NotNullOrWhiteSpace() ? " " + Alias : "")}";
-
-		//private void SetFullyQualify(bool isQualified)
-		//{
-		//	while (PreviousClause != null)
-		//	{
-		//		if (PreviousClause is Select select)
-		//		{
-		//			select.FullyQualify = isQualified;
-		//		}
-
-		//		PreviousClause = PreviousClause.PreviousClause;
-		//	}
-		//}
+		internal override string ToSql()
+		{
+			return $"{PreviousClause.ToSql()} {JoinType.ToSqlString()} {Name}{(Alias.NotNullOrWhiteSpace() ? " " + Alias : "")}";
+		}
 	}
 
 	public class JoinOn : Clause
@@ -270,17 +177,9 @@ namespace Jaunty
 		internal string Column1 { get; }
 		internal string Column2 { get; }
 
-		internal override string Sql
+		internal override string ToSql()
 		{
-			get
-			{
-				if (sql.IsNullOrEmpty())
-				{
-					sql = $"{PreviousClause.Sql} ON {Column1} = {Column2}";
-				}
-
-				return sql;
-			}
+			return $"{PreviousClause.ToSql()} ON {Column1} = {Column2}";
 		}
 	}
 
@@ -368,31 +267,23 @@ namespace Jaunty
 			return ((SetClause)PreviousClause).ToString();
 		}
 
-		internal override string Sql
+		internal override string ToSql()
 		{
-			get
+			var sb = new StringBuilder();
+			sb.Append(PreviousClause.ToSql() + " ");
+			sb.Append("WHERE ");
+
+			for (int i = 0; i < whereClauses.Count; i++)
 			{
-				if (sql.IsNullOrEmpty())
+				sb.Append(whereClauses[i].ToSql());
+
+				if (i < whereClauses.Count - 1)
 				{
-					var sb = new StringBuilder();
-					sb.Append(PreviousClause.Sql + " ");
-					sb.Append("WHERE ");
-
-					for (int i = 0; i < whereClauses.Count; i++)
-					{
-						sb.Append(whereClauses[i].ToSql());
-
-						if (i < whereClauses.Count - 1)
-						{
-							sb.Append(" ");
-						}
-					}
-
-					sql = sb.ToString();
+					sb.Append(" ");
 				}
-				
-				return sql;
 			}
+
+			return sb.ToString();
 		}
 	}
 
@@ -421,7 +312,10 @@ namespace Jaunty
 			Column = column;
 		}
 
-		internal override string Sql => "";
+		internal override string ToSql()
+		{
+			return "";
+		}
 	}
 
 	public class AndClause : Clause
@@ -430,7 +324,10 @@ namespace Jaunty
 		{
 		}
 
-		internal override string Sql => "AND";
+		internal override string ToSql()
+		{
+			return "AND";
+		}
 	}
 
 	public class OrClause : Clause
@@ -439,7 +336,10 @@ namespace Jaunty
 		{
 		}
 
-		internal override string Sql => "OR";
+		internal override string ToSql()
+		{
+			return "OR";
+		}
 	}
 
 	public class SetClause : Clause
@@ -470,7 +370,10 @@ namespace Jaunty
 			return Sets.ToSetClause();
 		}
 
-		internal override string Sql => "";
+		internal override string ToSql()
+		{
+			return "";
+		}
 	}
 
 	public class GroupBy : Clause
@@ -482,7 +385,10 @@ namespace Jaunty
 
 		internal IList<string> GroupBys { get; private set; }
 
-		internal override string Sql => $"{PreviousClause.Sql} GROUP BY {string.Join(", ", GroupBys)}";
+		internal override string ToSql()
+		{
+			return $"{PreviousClause.ToSql()} GROUP BY {string.Join(", ", GroupBys)}";
+		}
 	}
 
 	public class Having : Clause
@@ -494,7 +400,10 @@ namespace Jaunty
 
 		internal string Text { get; }
 
-		internal override string Sql => $"{PreviousClause.Sql} HAVING {Text}";
+		internal override string ToSql()
+		{
+			return $"{PreviousClause.ToSql()} HAVING {Text}"; ;
+		}
 	}
 
 	public class OrderBy : Clause
@@ -514,23 +423,20 @@ namespace Jaunty
 			}
 		}
 
-		internal override string Sql
+		internal override string ToSql()
 		{
-			get
+			var sb = new StringBuilder(PreviousClause.ToSql() + " ");
+
+			for (int i = 0; i < OrderBys.Count; i++)
 			{
-				var sb = new StringBuilder(PreviousClause.Sql + " ");
-
-				for (int i = 0; i < OrderBys.Count; i++)
-				{
-					KeyValuePair<string, SortOrder?> kvp = OrderBys.ElementAt(i);
-					sb.AppendIf(i == 0, "ORDER BY ");
-					sb.Append($"{kvp.Key}");
-					sb.AppendIf(kvp.Value.HasValue, $" {(kvp.Value == SortOrder.Descending ? "DESC" : "ASC")}");
-					sb.AppendIf(i < OrderBys.Count - 1, ", ");
-				}
-
-				return sb.ToString();
+				KeyValuePair<string, SortOrder?> kvp = OrderBys.ElementAt(i);
+				sb.AppendIf(i == 0, "ORDER BY ");
+				sb.Append($"{kvp.Key}");
+				sb.AppendIf(kvp.Value.HasValue, $" {(kvp.Value == SortOrder.Descending ? "DESC" : "ASC")}");
+				sb.AppendIf(i < OrderBys.Count - 1, ", ");
 			}
+
+			return sb.ToString();
 		}
 	}
 
@@ -543,7 +449,10 @@ namespace Jaunty
 
 		internal int Count { get; private set; }
 
-		internal override string Sql => $"{PreviousClause.Sql} LIMIT {Count}";
+		internal override string ToSql()
+		{
+			return $"{PreviousClause.ToSql()} LIMIT {Count}";
+		}
 	}
 
 	public class Offset : Clause
@@ -555,7 +464,10 @@ namespace Jaunty
 
 		internal int Number { get; private set; }
 
-		internal override string Sql => $"{PreviousClause.Sql} OFFSET {Number}{(SqlDialect == Dialects.SqlServer ? " ROWS" : "")}";
+		internal override string ToSql()
+		{
+			return $"{PreviousClause.ToSql()} OFFSET {Number}{(SqlDialect == Dialects.SqlServer ? " ROWS" : "")}";
+		}
 	}
 
 	public class FetchFirst : Clause
@@ -567,7 +479,10 @@ namespace Jaunty
 
 		internal int RowCount { get; private set; }
 
-		internal override string Sql => $"{PreviousClause.Sql} FETCH FIRST {RowCount} ROWS ONLY";
+		internal override string ToSql()
+		{
+			return $"{PreviousClause.ToSql()} FETCH FIRST {RowCount} ROWS ONLY";
+		}
 	}
 
 	public class FetchNext : Clause
@@ -579,6 +494,9 @@ namespace Jaunty
 
 		internal int RowCount { get; private set; }
 
-		internal override string Sql => $"{PreviousClause.Sql} FETCH NEXT {RowCount} ROWS ONLY";
+		internal override string ToSql()
+		{
+			return $"{PreviousClause.ToSql()} FETCH NEXT {RowCount} ROWS ONLY";
+		}
 	}
 }
