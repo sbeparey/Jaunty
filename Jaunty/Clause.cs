@@ -44,7 +44,7 @@ namespace Jaunty
 		public override string ToString()
 		{
 			var column = Column.Replace("#", ".", StringComparison.OrdinalIgnoreCase);
-			var parameter = SqlDialect == Dialects.Postgres ? column : Column.Replace(".", "__", StringComparison.OrdinalIgnoreCase);
+			var parameter = SqlDialect == Dialect.Postgres ? column : Column.Replace(".", "__", StringComparison.OrdinalIgnoreCase);
 			column = column.Replace("$", "", StringComparison.OrdinalIgnoreCase);
 			column = ColumnNameFormatter?.Invoke(column) ?? column;
 			parameter = ParameterFormatter?.Invoke(parameter) ?? $"@{parameter}";
@@ -253,7 +253,7 @@ namespace Jaunty
 
 			for (int i = 0; i < whereClauses.Count; i++)
 			{
-				var column = SqlDialect == Dialects.Postgres
+				var column = SqlDialect == Dialect.Postgres
 					? whereClauses[i].Column
 					: whereClauses[i].Column.Replace(".", "__", StringComparison.CurrentCultureIgnoreCase);
 				dict.Add(column, whereClauses[i].Value);
@@ -466,7 +466,7 @@ namespace Jaunty
 
 		internal override string ToSql()
 		{
-			return $"{PreviousClause.ToSql()} OFFSET {Number}{(SqlDialect == Dialects.SqlServer ? " ROWS" : "")}";
+			return $"{PreviousClause.ToSql()} OFFSET {Number}{(SqlDialect == Dialect.SqlServer ? " ROWS" : "")}";
 		}
 	}
 

@@ -10,7 +10,7 @@ namespace Jaunty
 {
 	public static partial class Jaunty
 	{
-		public static Dialects SqlDialect = Dialects.Empty;
+		public static Dialect SqlDialect { get; set; }
 
 		public delegate string TableNameMapperDelegate(Type type);
 		public static TableNameMapperDelegate TableNameMapper;
@@ -27,7 +27,15 @@ namespace Jaunty
 		public delegate string PluralizeDelegate(string name);
 		public static PluralizeDelegate Pluralize;
 
-		public enum Dialects
+		public enum ClauseType
+		{
+			Insert = 1,
+			Select = 2,
+			Update = 3,
+			Delete = 4
+		}
+
+		public enum Dialect
 		{
 			Empty = 0,
 			SqlServer = 1,
@@ -402,10 +410,10 @@ namespace Jaunty
 					? word
 					: (SqlDialect switch
 					{
-						Dialects.MySql => SqlTemplates.MySql.Identifier.Replace("{{name}}", word, StringComparison.CurrentCultureIgnoreCase),
-						Dialects.Postgres => SqlTemplates.Postgres.Identifier.Replace("{{name}}", word, StringComparison.CurrentCultureIgnoreCase),
-						Dialects.SqlLite => SqlTemplates.Sqlite.Identifier.Replace("{{name}}", word, StringComparison.CurrentCultureIgnoreCase),
-						Dialects.SqlServer => SqlTemplates.SqlServer.Identifier.Replace("{{name}}", word, StringComparison.CurrentCultureIgnoreCase),
+						Dialect.MySql => SqlTemplates.MySql.Identifier.Replace("{{name}}", word, StringComparison.CurrentCultureIgnoreCase),
+						Dialect.Postgres => SqlTemplates.Postgres.Identifier.Replace("{{name}}", word, StringComparison.CurrentCultureIgnoreCase),
+						Dialect.SqlLite => SqlTemplates.Sqlite.Identifier.Replace("{{name}}", word, StringComparison.CurrentCultureIgnoreCase),
+						Dialect.SqlServer => SqlTemplates.SqlServer.Identifier.Replace("{{name}}", word, StringComparison.CurrentCultureIgnoreCase),
 						_ => SqlTemplates.SqlServer.Identifier.Replace("{{name}}", word, StringComparison.CurrentCultureIgnoreCase)
 					});
 		}

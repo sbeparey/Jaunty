@@ -180,14 +180,14 @@ namespace Jaunty
 			{
 				string selectId = SqlDialect switch
 				{
-					Dialects.Postgres => SqlTemplates.Postgres.InsertedPrimaryKey.Replace("{{id}}", keyColumnName),
-					Dialects.SqlLite => SqlTemplates.Sqlite.InsertedPrimaryKey,
-					Dialects.MySql => SqlTemplates.MySql.InsertedPrimaryKey,
-					Dialects.SqlServer => SqlTemplates.SqlServer.InsertedPrimaryKey,
+					Dialect.Postgres => SqlTemplates.Postgres.InsertedPrimaryKey.Replace("{{id}}", keyColumnName),
+					Dialect.SqlLite => SqlTemplates.Sqlite.InsertedPrimaryKey,
+					Dialect.MySql => SqlTemplates.MySql.InsertedPrimaryKey,
+					Dialect.SqlServer => SqlTemplates.SqlServer.InsertedPrimaryKey,
 					_ => SqlTemplates.SqlServer.InsertedPrimaryKey
 				};
 
-				sql = SqlDialect != Dialects.Postgres ? $"{sql}; {selectId}" : $"{sql} {selectId}";
+				sql = SqlDialect != Dialect.Postgres ? $"{sql}; {selectId}" : $"{sql} {selectId}";
 			}
 			else
 			{

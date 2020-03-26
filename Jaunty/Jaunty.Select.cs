@@ -63,7 +63,7 @@ namespace Jaunty
 		public static T Get<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = KeyToParameter<T, TKey>(key);
-			string sql = ticket is null ? BuildSelectSql<T>(parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(parameters));
+			string sql = ticket is null ? BuildSelectSql<T>(ClauseType.Select, parameters)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(ClauseType.Select, parameters) );
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return connection.QuerySingleOrDefault<T>(sql, parameters, transaction);
@@ -82,7 +82,7 @@ namespace Jaunty
 		public static async Task<T> GetAsync<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = KeyToParameter<T, TKey>(key);
-			string sql = ticket is null ? BuildSelectSql<T>(parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(parameters));
+			string sql = ticket is null ? BuildSelectSql<T>(ClauseType.Select, parameters)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(ClauseType.Select, parameters) );
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await connection.QuerySingleOrDefaultAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
@@ -106,7 +106,7 @@ namespace Jaunty
 			}
 
 			var parameters = ExpressionToParameters(expression);
-			string sql = ticket is null ? BuildSelectSql(expression) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(expression));
+			string sql = ticket is null ? BuildSelectSql(ClauseType.Select, expression)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(ClauseType.Select, expression) );
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return connection.Query<T>(sql, parameters, transaction);
@@ -130,7 +130,7 @@ namespace Jaunty
 			}
 
 			var parameters = ExpressionToParameters(expression);
-			string sql = ticket is null ? BuildSelectSql(expression) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(expression));
+			string sql = ticket is null ? BuildSelectSql(ClauseType.Select, expression)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(ClauseType.Select, expression) );
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await connection.QueryAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
@@ -154,7 +154,7 @@ namespace Jaunty
 			}
 
 			var parameters = nameValuePairs.ToDictionary();
-			string sql = ticket is null ? BuildSelectSql<T>(parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(parameters));
+			string sql = ticket is null ? BuildSelectSql<T>(ClauseType.Select, parameters)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(ClauseType.Select, parameters) );
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return connection.Query<T>(sql, nameValuePairs, transaction);
@@ -179,7 +179,7 @@ namespace Jaunty
 			}
 
 			var parameters = nameValuePairs.ToDictionary();
-			string sql = ticket is null ? BuildSelectSql<T>(parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(parameters));
+			string sql = ticket is null ? BuildSelectSql<T>(ClauseType.Select, parameters)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(ClauseType.Select, parameters) );
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await connection.QueryAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
@@ -202,7 +202,7 @@ namespace Jaunty
 			if (from is null)
 				throw new ArgumentNullException(nameof(from));
 
-			string sql = ticket is null ? ExtractSql<T>(from) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(from));
+			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, from) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, from));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return from.Connection.Query<T>(sql, null, transaction);
@@ -221,7 +221,7 @@ namespace Jaunty
 			if (from is null)
 				throw new ArgumentNullException(nameof(from));
 
-			string sql = ticket is null ? ExtractSql<T>(from) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(from));
+			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, from) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, from));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await from.Connection.QueryAsync<T>(sql, null, transaction).ConfigureAwait(false);
@@ -233,12 +233,12 @@ namespace Jaunty
 		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="from">From<T></param>
 		/// <returns>Returns <see cref="String"/></returns>
-		public static string SelectAsSql<T>(this From from, ITicket ticket = null)
+		public static string SelectAsString<T>(this From from, ITicket ticket = null)
 		{
 			if (from is null)
 				throw new ArgumentNullException(nameof(from));
 
-			return ticket is null ? ExtractSql<T>(from) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(from));
+			return ticket is null ? ExtractSql<T>(ClauseType.Select, from) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, from));
 		}
 
 		/// <summary>
@@ -254,7 +254,7 @@ namespace Jaunty
 			if (joinOn is null)
 				throw new ArgumentNullException(nameof(joinOn));
 
-			string sql = ticket is null ? ExtractSql<T>(joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(joinOn));
+			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, joinOn));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return joinOn.Connection.Query<T>(sql, transaction: transaction);
@@ -273,7 +273,7 @@ namespace Jaunty
 			if (joinOn is null)
 				throw new ArgumentNullException(nameof(joinOn));
 
-			string sql = ticket is null ? ExtractSql<T>(joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(joinOn));
+			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, joinOn));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await joinOn.Connection.QueryAsync<T>(sql, transaction: transaction).ConfigureAwait(false);
@@ -285,12 +285,12 @@ namespace Jaunty
 		/// <typeparam name="T">The type representing the database table or view.</typeparam>
 		/// <param name="joinOn">JoinOn<T></param>
 		/// <returns>Returns <see cref="string"/></returns>
-		public static string SelectAsSql<T>(this JoinOn joinOn, ITicket ticket = null)
+		public static string SelectAsString<T>(this JoinOn joinOn, ITicket ticket = null)
 		{
 			if (joinOn is null)
 				throw new ArgumentNullException(nameof(joinOn));
 
-			return ticket is null ? ExtractSql<T>(joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(joinOn));
+			return ticket is null ? ExtractSql<T>(ClauseType.Select, joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, joinOn));
 		}
 
 		/// <summary>
@@ -306,7 +306,7 @@ namespace Jaunty
 			if (condition is null)
 				throw new ArgumentNullException(nameof(condition));
 
-			string sql = ticket is null ? ExtractSql<T>(condition) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(condition));
+			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, condition) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, condition));
 			var parameters = condition.GetParameters();
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
@@ -326,7 +326,7 @@ namespace Jaunty
 			if (condition is null)
 				throw new ArgumentNullException(nameof(condition));
 
-			string sql = ticket is null ? ExtractSql<T>(condition) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(condition));
+			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, condition) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, condition));
 			var parameters = condition.GetParameters();
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnSelecting?.Invoke(ticket, eventArgs);
@@ -340,12 +340,12 @@ namespace Jaunty
 		/// <param name="condition">The condition clause</param>
 		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <returns>Returns <see cref="string"/></returns>
-		public static string SelectAsSql<T>(this Condition condition, ITicket ticket = null)
+		public static string SelectAsString<T>(this Condition condition, ITicket ticket = null)
 		{
 			if (condition is null)
 				throw new ArgumentNullException(nameof(condition));
 
-			return ticket is null ? ExtractSql<T>(condition) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(condition));
+			return ticket is null ? ExtractSql<T>(ClauseType.Select, condition) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, condition));
 		}
 
 		/// <summary>
@@ -363,8 +363,8 @@ namespace Jaunty
 				throw new ArgumentNullException(nameof(groupBy));
 
 			string sql = ticket is null
-				? ExtractSql<T>(groupBy, selectClause: selectClause)
-				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(groupBy, selectClause: selectClause));
+				? ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause)
+				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return groupBy.Connection.Query<T>(sql, null, transaction);
@@ -384,8 +384,8 @@ namespace Jaunty
 				throw new ArgumentNullException(nameof(groupBy));
 
 			string sql = ticket is null
-				? ExtractSql<T>(groupBy, selectClause: selectClause)
-				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(groupBy, selectClause: selectClause));
+				? ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause)
+				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await groupBy.Connection.QueryAsync<T>(sql, null, transaction).ConfigureAwait(false);
@@ -399,14 +399,14 @@ namespace Jaunty
 		/// <param name="selectClause">Select clause</param>
 		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <returns></returns>
-		public static string SelectAsSql<T>(this GroupBy groupBy, string selectClause, ITicket ticket = null)
+		public static string SelectAsString<T>(this GroupBy groupBy, string selectClause, ITicket ticket = null)
 		{
 			if (groupBy is null)
 				throw new ArgumentNullException(nameof(groupBy));
 
 			return ticket is null
-				? ExtractSql<T>(groupBy, selectClause: selectClause)
-				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(groupBy, selectClause: selectClause));
+				? ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause)
+				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause));
 		}
 
 		/// <summary>
@@ -423,8 +423,8 @@ namespace Jaunty
 				throw new ArgumentNullException(nameof(orderBy));
 
 			string sql = ticket is null
-					   ? ExtractSql<T>(orderBy, selectClause: selectClause)
-					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(orderBy, selectClause: selectClause));
+					   ? ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause)
+					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return orderBy.Connection.Query<T>(sql: sql, transaction: transaction);
@@ -444,8 +444,8 @@ namespace Jaunty
 				throw new ArgumentNullException(nameof(orderBy));
 
 			string sql = ticket is null
-					   ? ExtractSql<T>(orderBy, selectClause: selectClause)
-					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(orderBy, selectClause: selectClause));
+					   ? ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause)
+					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await orderBy.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
@@ -458,14 +458,14 @@ namespace Jaunty
 		/// <param name="orderBy">OrderBy clause</param>
 		/// <param name="ticket"></param>
 		/// <returns>Returns <see cref="string"/></returns>
-		public static string SelectAsSql<T>(this OrderBy orderBy, string selectClause = null, ITicket ticket = null)
+		public static string SelectAsString<T>(this OrderBy orderBy, string selectClause = null, ITicket ticket = null)
 		{
 			if (orderBy is null)
 				throw new ArgumentNullException(nameof(orderBy));
 
 			return ticket is null
-					   ? ExtractSql<T>(orderBy, selectClause: selectClause)
-					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(orderBy, selectClause: selectClause));
+					   ? ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause)
+					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause));
 		}
 
 		/// <summary>
@@ -481,7 +481,7 @@ namespace Jaunty
 			if (limit is null)
 				throw new ArgumentNullException(nameof(limit));
 
-			var sql = ticket is null ? ExtractSql<T>(limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(limit));
+			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, limit));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return limit.Connection.Query<T>(sql: sql, transaction: transaction);
@@ -500,7 +500,7 @@ namespace Jaunty
 			if (limit is null)
 				throw new ArgumentNullException(nameof(limit));
 
-			var sql = ticket is null ? ExtractSql<T>(limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(limit));
+			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, limit));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await limit.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
@@ -513,12 +513,12 @@ namespace Jaunty
 		/// <param name="limit"></param>
 		/// <param name="ticket"></param>
 		/// <returns></returns>
-		public static string SelectAsSql<T>(this Limit limit, ITicket ticket = null)
+		public static string SelectAsString<T>(this Limit limit, ITicket ticket = null)
 		{
 			if (limit is null)
 				throw new ArgumentNullException(nameof(limit));
 
-			return ticket is null ? ExtractSql<T>(limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(limit));
+			return ticket is null ? ExtractSql<T>(ClauseType.Select, limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, limit));
 		}
 
 		/// <summary>
@@ -534,7 +534,7 @@ namespace Jaunty
 			if (fetchFirst is null)
 				throw new ArgumentNullException(nameof(fetchFirst));
 
-			var sql = ticket is null ? ExtractSql<T>(fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchFirst));
+			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchFirst));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return fetchFirst.Connection.Query<T>(sql: sql, transaction: transaction);
@@ -553,7 +553,7 @@ namespace Jaunty
 			if (fetchFirst is null)
 				throw new ArgumentNullException(nameof(fetchFirst));
 
-			var sql = ticket is null ? ExtractSql<T>(fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchFirst));
+			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchFirst));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await fetchFirst.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
@@ -566,12 +566,12 @@ namespace Jaunty
 		/// <param name="fetchFirst"></param>
 		/// <param name="ticket"></param>
 		/// <returns></returns>
-		public static string SelectAsSql<T>(this FetchFirst fetchFirst, ITicket ticket = null)
+		public static string SelectAsString<T>(this FetchFirst fetchFirst, ITicket ticket = null)
 		{
 			if (fetchFirst is null)
 				throw new ArgumentNullException(nameof(fetchFirst));
 
-			return ticket is null ? ExtractSql<T>(fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchFirst));
+			return ticket is null ? ExtractSql<T>(ClauseType.Select, fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchFirst));
 		}
 
 		/// <summary>
@@ -587,7 +587,7 @@ namespace Jaunty
 			if (fetchNext is null)
 				throw new ArgumentNullException(nameof(fetchNext));
 
-			var sql = ticket is null ? ExtractSql<T>(fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchNext));
+			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchNext));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return fetchNext.Connection.Query<T>(sql: sql, transaction: transaction);
@@ -606,7 +606,7 @@ namespace Jaunty
 			if (fetchNext is null)
 				throw new ArgumentNullException(nameof(fetchNext));
 
-			var sql = ticket is null ? ExtractSql<T>(fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchNext));
+			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchNext));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await fetchNext.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
@@ -619,12 +619,12 @@ namespace Jaunty
 		/// <param name="fetchNext"></param>
 		/// <param name="ticket"></param>
 		/// <returns></returns>
-		public static string SelectAsSql<T>(this FetchNext fetchNext, ITicket ticket = null)
+		public static string SelectAsString<T>(this FetchNext fetchNext, ITicket ticket = null)
 		{
 			if (fetchNext is null)
 				throw new ArgumentNullException(nameof(fetchNext));
 
-			return ticket is null ? ExtractSql<T>(fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(fetchNext));
+			return ticket is null ? ExtractSql<T>(ClauseType.Select, fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchNext));
 		}
 
 		public static IEnumerable<T> Select<T>(this Having having, string clause, IDbTransaction transaction = null, ITicket ticket = null)
@@ -633,8 +633,8 @@ namespace Jaunty
 				throw new ArgumentNullException(nameof(having));
 
 			var sql = ticket is null
-					? ExtractSql<T>(having, selectClause: clause)
-					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(having, selectClause: clause));
+					? ExtractSql<T>(ClauseType.Select, having, selectClause: clause)
+					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, having, selectClause: clause));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return having.Connection.Query<T>(sql, null, transaction);
@@ -646,8 +646,8 @@ namespace Jaunty
 				throw new ArgumentNullException(nameof(having));
 
 			var sql = ticket is null
-					? ExtractSql<T>(having, selectClause: clause)
-					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(having, selectClause: clause));
+					? ExtractSql<T>(ClauseType.Select, having, selectClause: clause)
+					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, having, selectClause: clause));
 			var eventArgs = new SqlEventArgs { Sql = sql };
 			OnSelecting?.Invoke(ticket, eventArgs);
 			return await having.Connection.QueryAsync<T>(sql, null, transaction).ConfigureAwait(false);
@@ -793,7 +793,7 @@ namespace Jaunty
 			return orderBy;
 		}
 
-		private static string ExtractSql<T>(Clause clause, string alias = null, string selectClause = null)
+		private static string ExtractSql<T>(ClauseType clauseType, Clause clause, string alias = null, string selectClause = null)
 		{
 			var type = GetType(typeof(T));
 			string sql = clause.ToSql();
@@ -814,7 +814,22 @@ namespace Jaunty
 
 			string columns = selectClause ?? GetFormattedColumns(type, selectedAlias ?? (hasJoin ? GetTypeName(type) : null));
 			var builder = new StringBuilder();
-			builder.Append("SELECT ");
+
+			switch (clauseType)
+			{
+				case ClauseType.Select:
+					builder.Append("SELECT ");
+					break;
+				case ClauseType.Delete:
+					builder.Append("DELETE ");
+					break;
+				case ClauseType.Update:
+					builder.Append("UPDATE ");
+					break;
+				case ClauseType.Insert:
+					builder.Append("INSERT INTO ");
+					break;
+			}
 
 			if (hasDistinct || hasTop)
 			{
@@ -823,7 +838,18 @@ namespace Jaunty
 			}
 			else
 			{
-				builder.Append(columns + " " + sql);
+				switch (clauseType)
+				{
+					case ClauseType.Select:
+						builder.Append(columns + " " + sql);
+						break;
+					case ClauseType.Delete:
+					case ClauseType.Update:
+						builder.Append(sql);
+						break;
+					case ClauseType.Insert:
+						break;
+				}
 			}
 
 			builder.Append(";");
@@ -887,6 +913,22 @@ namespace Jaunty
 			return parameters;
 		}
 
+		private static Dictionary<string, object> KeysToParameters<T, TKey1, TKey2>(TKey1 key1, TKey2 key2)
+		{
+			Type type = GetType(typeof(T));
+			var keys = GetKeysCache(type).Keys.ToList();
+
+			if (keys.Count != 2)
+			{
+				throw new ArgumentException("This entity does not have two key columns.");
+			}
+
+			var parameters = new Dictionary<string, object>();
+			parameters.Add(keys[0], key1);
+			parameters.Add(keys[1], key2);
+			return parameters;
+		}
+
 		private static Dictionary<string, object> ExpressionToParameters<T>(Expression<Func<T, bool>> expression)
 		{
 			if (expression is null)
@@ -898,7 +940,7 @@ namespace Jaunty
 			return dictionary;
 		}
 
-		private static string BuildSelectSql<T>(Expression<Func<T, bool>> expression)
+		private static string BuildSelectSql<T>(ClauseType clauseType, Expression<Func<T, bool>> expression)
 		{
 			Type type = GetType(typeof(T));
 			var columns = GetColumnsCache(type).Keys.ToList();
@@ -909,19 +951,47 @@ namespace Jaunty
 				where.AppendIf(name is null, $" {oper} ");
 			});
 
-			return SqlTemplates.SelectWhere.Replace("{{columns}}", columns.ToClause(), StringComparison.OrdinalIgnoreCase)
-										   .Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
-										   .Replace("{{where}}", where.ToString(), StringComparison.OrdinalIgnoreCase);
+			switch (clauseType)
+			{
+				case ClauseType.Select:
+					return SqlTemplates.SelectWhere.Replace("{{columns}}", columns.ToClause(), StringComparison.OrdinalIgnoreCase)
+												   .Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+												   .Replace("{{where}}", where.ToString(), StringComparison.OrdinalIgnoreCase);
+				case ClauseType.Delete:
+					return SqlTemplates.DeleteWhere.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+												   .Replace("{{where}}", where.ToString(), StringComparison.OrdinalIgnoreCase);
+				case ClauseType.Update:
+					return SqlTemplates.UpdateWhere.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+												   .Replace("{{where}}", where.ToString(), StringComparison.OrdinalIgnoreCase);
+				case ClauseType.Insert:
+					throw new NotImplementedException();
+				default:
+					throw new NotImplementedException();
+			}
 		}
 
-		private static string BuildSelectSql<T>(IDictionary<string, object> parameters)
+		private static string BuildSelectSql<T>(ClauseType clauseType, IDictionary<string, object> parameters)
 		{
 			Type type = GetType(typeof(T));
 			var columns = GetColumnsCache(type).Keys.ToList();
-			
-			return SqlTemplates.SelectWhere.Replace("{{columns}}", columns.ToClause(), StringComparison.OrdinalIgnoreCase)
-										   .Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
-										   .Replace("{{where}}", parameters.ToWhereClause(), StringComparison.OrdinalIgnoreCase);
+
+			switch (clauseType)
+			{
+				case ClauseType.Select:
+					return SqlTemplates.SelectWhere.Replace("{{columns}}", columns.ToClause(), StringComparison.OrdinalIgnoreCase)
+												   .Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+												   .Replace("{{where}}", parameters.ToWhereClause(), StringComparison.OrdinalIgnoreCase);
+				case ClauseType.Delete:
+					return SqlTemplates.DeleteWhere.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+												   .Replace("{{where}}", parameters.ToWhereClause(), StringComparison.OrdinalIgnoreCase);
+				case ClauseType.Update:
+					return SqlTemplates.UpdateWhere.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+												   .Replace("{{where}}", parameters.ToWhereClause(), StringComparison.OrdinalIgnoreCase);
+				case ClauseType.Insert:
+					throw new NotImplementedException();
+				default:
+					throw new NotImplementedException();
+			}
 		}
 
 		//private static string BuildSelectSql<T>()

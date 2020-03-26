@@ -11,7 +11,7 @@ using Xunit.Abstractions;
 
 namespace Jaunty.Tests.SqlServer.IntegrationTests
 {
-	[Collection("sql server select tests")]
+	[Collection("sql server tests")]
 	public class SelectTests : IClassFixture<Northwind>
 	{
 		private readonly ITestOutputHelper output;
@@ -21,7 +21,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		public SelectTests(ITestOutputHelper output, Northwind northwind)
 		{
 			this.output = output;
-			Jaunty.SqlDialect = Jaunty.Dialects.SqlServer;
+			Jaunty.SqlDialect = Jaunty.Dialect.SqlServer;
 			this.northwind = northwind;
 			Jaunty.TableNameMapper += GetEntityName;
 		}
