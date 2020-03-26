@@ -175,68 +175,6 @@ namespace Jaunty
 		}
 
 		/// <summary>
-		/// Deletes by where
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="condition">The conditional clause.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <returns>Return number of rows affected.</returns>
-		public static int Delete<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			if (condition is null)
-				throw new ArgumentNullException(nameof(condition));
-
-			var parameters = condition.GetParameters();
-			string sql = ticket is null
-					? ExtractSql<T>(ClauseType.Delete, condition)
-					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, condition));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
-			return condition.Connection.Execute(sql, parameters, transaction);
-		}
-
-		/// <summary>
-		/// Deletes by where async
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="condition">The conditional clause.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <returns>Return number of rows affected.</returns>
-		public static async Task<int> DeleteAsync<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
-		{
-			if (condition is null)
-				throw new ArgumentNullException(nameof(condition));
-
-			var parameters = condition.GetParameters();
-			string sql = ticket is null
-					? ExtractSql<T>(ClauseType.Delete, condition)
-					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, condition));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
-			return await condition.Connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
-		}
-
-		/// <summary>
-		/// Generates a SQL string for Deletes by where
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="condition">The conditional clause.</param>
-		/// <param name="ticket">An ITicket to uniquely id the query.</param>
-		/// <returns>Return number of rows affected.</returns>
-		public static string DeleteAsString<T>(this Condition condition, ITicket ticket = null)
-		{
-			if (condition is null)
-				throw new ArgumentNullException(nameof(condition));
-
-			var parameters = condition.GetParameters();
-			return ticket is null
-				   ? ExtractSql<T>(ClauseType.Delete, condition)
-				   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, condition));
-		}
-
-		/// <summary>
 		/// Deletes by expression
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table.</typeparam>
@@ -302,6 +240,127 @@ namespace Jaunty
 			return ticket is null
 					? BuildSql(ClauseType.Delete, expression)
 					: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql(ClauseType.Delete, expression));
+		}
+
+		/// <summary>
+		/// Deletes by anonymous object
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <param name="connection">The connection to query on.</param>
+		/// <param name="nameValuePairs">An anonymous object</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Returns number of rows affected.</returns>
+		public static int DeleteAnonymous<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (nameValuePairs is null)
+				throw new ArgumentNullException(nameof(nameValuePairs));
+
+			var parameters = nameValuePairs.ToDictionary();
+			string sql = ticket is null ? BuildSql<T>(ClauseType.Delete, parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnDeleting?.Invoke(ticket, eventArgs);
+			return connection.Execute(sql, parameters, transaction);
+		}
+
+		/// <summary>
+		/// Deletes by anonymous object async
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <param name="connection">The connection to query on.</param>
+		/// <param name="nameValuePairs">An anonymous object</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Returns number of rows affected.</returns>
+		public static async Task<int> DeleteAnonymousAsync<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (nameValuePairs is null)
+				throw new ArgumentNullException(nameof(nameValuePairs));
+
+			var parameters = nameValuePairs.ToDictionary();
+			string sql = ticket is null ? BuildSql<T>(ClauseType.Delete, parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnDeleting?.Invoke(ticket, eventArgs);
+			return await connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
+		}
+
+		/// <summary>
+		/// Generates a SQL string for Deletes by anonymous object
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <param name="connection">The connection to query on.</param>
+		/// <param name="nameValuePairs">An anonymous object</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Returns <c>string</c></returns>
+		public static string DeleteAnonymousAsString<T>(this IDbConnection connection, object nameValuePairs, ITicket ticket = null)
+		{
+			if (nameValuePairs is null)
+				throw new ArgumentNullException(nameof(nameValuePairs));
+
+			var parameters = nameValuePairs.ToDictionary();
+			return ticket is null ? BuildSql<T>(ClauseType.Delete, parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
+		}
+
+		/// <summary>
+		/// Deletes by where
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <param name="condition">The conditional clause.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Return number of rows affected.</returns>
+		public static int Delete<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (condition is null)
+				throw new ArgumentNullException(nameof(condition));
+
+			var parameters = condition.GetParameters();
+			string sql = ticket is null
+					? ExtractSql<T>(ClauseType.Delete, condition)
+					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, condition));
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnDeleting?.Invoke(ticket, eventArgs);
+			return condition.Connection.Execute(sql, parameters, transaction);
+		}
+
+		/// <summary>
+		/// Deletes by where async
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <param name="condition">The conditional clause.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Return number of rows affected.</returns>
+		public static async Task<int> DeleteAsync<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (condition is null)
+				throw new ArgumentNullException(nameof(condition));
+
+			var parameters = condition.GetParameters();
+			string sql = ticket is null
+					? ExtractSql<T>(ClauseType.Delete, condition)
+					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, condition));
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnDeleting?.Invoke(ticket, eventArgs);
+			return await condition.Connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
+		}
+
+		/// <summary>
+		/// Generates a SQL string for Deletes by where
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <param name="condition">The conditional clause.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Return number of rows affected.</returns>
+		public static string DeleteAsString<T>(this Condition condition, ITicket ticket = null)
+		{
+			if (condition is null)
+				throw new ArgumentNullException(nameof(condition));
+
+			var parameters = condition.GetParameters();
+			return ticket is null
+				   ? ExtractSql<T>(ClauseType.Delete, condition)
+				   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, condition));
 		}
 	}
 }

@@ -154,6 +154,28 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
+		public void delete_using_Anonymous_Delete_returns_true()
+		{
+			var ticket = new Ticket("delete order details by id");
+			string sql = null;
+			IDictionary<string, object> parameters = null;
+
+			Jaunty.OnDeleting += (sender, args) =>
+			{
+				sql = args.Sql;
+				parameters = args.Parameters;
+			};
+
+			var rowsAffected = northwind.Connection.DeleteAnonymous<OrderDetail>(new { OrderId = 10248 }, ticket: ticket);
+			
+			Assert.Equal("DELETE FROM \"Order Details\" WHERE OrderId = @OrderId;", sql);
+			Assert.NotEmpty(parameters);
+			Assert.Equal("OrderId", parameters.ElementAt(0).Key);
+			Assert.Equal(10248, parameters.ElementAt(0).Value);
+			Assert.True(rowsAffected > 1);
+		}
+
+		[Fact]
 		public void delete_using_fluent_Delete_returns_true()
 		{
 			var ticket = new Ticket("delete products by fluent select");
