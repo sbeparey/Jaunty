@@ -1,4 +1,6 @@
-﻿using Dapper;
+﻿// ﷽
+
+using Dapper;
 
 using System;
 using System.Collections.Generic;
@@ -43,8 +45,8 @@ namespace Jaunty
 
 			IDictionary<string, object> parameter = KeyToParameter<T, TKey>(key);
 			string sql = ticket is null
-				? BuildSelectSql<T>(ClauseType.Delete, parameter)
-				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(ClauseType.Delete, parameter));
+				? BuildSql<T>(ClauseType.Delete, parameter)
+				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameter));
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameter };
 			OnDeleting?.Invoke(ticket, eventArgs);
 			int rowsAffected = connection.Execute(sql, parameter, transaction);
@@ -68,8 +70,8 @@ namespace Jaunty
 
 			IDictionary<string, object> parameter = KeyToParameter<T, TKey>(key);
 			string sql = ticket is null
-				? BuildSelectSql<T>(ClauseType.Delete, parameter)
-				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(ClauseType.Delete, parameter));
+				? BuildSql<T>(ClauseType.Delete, parameter)
+				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameter));
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameter };
 			OnDeleting?.Invoke(ticket, eventArgs);
 			int rowsAffected = await connection.ExecuteAsync(sql, parameter, transaction).ConfigureAwait(false);
@@ -92,8 +94,8 @@ namespace Jaunty
 
 			IDictionary<string, object> parameter = KeyToParameter<T, TKey>(key);
 			return ticket is null
-						? BuildSelectSql<T>(ClauseType.Delete, parameter)
-						: _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(ClauseType.Delete, parameter));
+						? BuildSql<T>(ClauseType.Delete, parameter)
+						: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameter));
 		}
 
 		/// <summary>
@@ -115,8 +117,8 @@ namespace Jaunty
 
 			IDictionary<string, object> parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
 			string sql = ticket is null
-				? BuildSelectSql<T>(ClauseType.Delete, parameters)
-				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(ClauseType.Delete, parameters));
+				? BuildSql<T>(ClauseType.Delete, parameters)
+				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnDeleting?.Invoke(ticket, eventArgs);
 			int rowsAffected = connection.Execute(sql, parameters, transaction);
@@ -142,8 +144,8 @@ namespace Jaunty
 
 			IDictionary<string, object> parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
 			string sql = ticket is null
-				? BuildSelectSql<T>(ClauseType.Delete, parameters)
-				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(ClauseType.Delete, parameters));
+				? BuildSql<T>(ClauseType.Delete, parameters)
+				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnDeleting?.Invoke(ticket, eventArgs);
 			int rowsAffected = await connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
@@ -168,8 +170,8 @@ namespace Jaunty
 
 			IDictionary<string, object> parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
 			return ticket is null
-						? BuildSelectSql<T>(ClauseType.Delete, parameters)
-						: _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql<T>(ClauseType.Delete, parameters));
+						? BuildSql<T>(ClauseType.Delete, parameters)
+						: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
 		}
 
 		/// <summary>
@@ -250,8 +252,8 @@ namespace Jaunty
 
 			var parameters = ExpressionToParameters(expression);
 			string sql = ticket is null
-					? BuildSelectSql(ClauseType.Delete, expression)
-					: _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(ClauseType.Delete, expression));
+					? BuildSql(ClauseType.Delete, expression)
+					: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql(ClauseType.Delete, expression));
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnDeleting?.Invoke(ticket, eventArgs);
 			return connection.Execute(sql, parameters, transaction);
@@ -273,8 +275,8 @@ namespace Jaunty
 
 			var parameters = ExpressionToParameters(expression);
 			string sql = ticket is null
-					? BuildSelectSql(ClauseType.Delete, expression)
-					: _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(ClauseType.Delete, expression));
+					? BuildSql(ClauseType.Delete, expression)
+					: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql(ClauseType.Delete, expression));
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnDeleting?.Invoke(ticket, eventArgs);
 			return await connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
@@ -298,8 +300,8 @@ namespace Jaunty
 
 			var parameters = ExpressionToParameters(expression);
 			return ticket is null
-					? BuildSelectSql(ClauseType.Delete, expression)
-					: _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectSql(ClauseType.Delete, expression));
+					? BuildSql(ClauseType.Delete, expression)
+					: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql(ClauseType.Delete, expression));
 		}
 	}
 }
