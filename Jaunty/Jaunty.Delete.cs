@@ -40,15 +40,8 @@ namespace Jaunty
 		/// <returns>Returns <c>true</c> if only one row is deleted.</returns>
 		public static bool Delete<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (connection is null)
-				throw new ArgumentNullException(nameof(connection));
-
-			IDictionary<string, object> parameter = KeyToParameter<T, TKey>(key);
-			string sql = ticket is null
-				? BuildSql<T>(ClauseType.Delete, parameter)
-				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameter));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameter };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			var parameter = KeyToParameter<T, TKey>(key);
+			string sql = Delete<T>(connection, parameter, ticket);
 			int rowsAffected = connection.Execute(sql, parameter, transaction);
 			return rowsAffected == 1;
 		}
@@ -65,15 +58,8 @@ namespace Jaunty
 		/// <returns>Returns <c>true</c> if only one row is deleted.</returns>
 		public static async Task<bool> DeleteAsync<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (connection is null)
-				throw new ArgumentNullException(nameof(connection));
-
-			IDictionary<string, object> parameter = KeyToParameter<T, TKey>(key);
-			string sql = ticket is null
-				? BuildSql<T>(ClauseType.Delete, parameter)
-				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameter));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameter };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			var parameter = KeyToParameter<T, TKey>(key);
+			string sql = Delete<T>(connection, parameter, ticket);
 			int rowsAffected = await connection.ExecuteAsync(sql, parameter, transaction).ConfigureAwait(false);
 			return rowsAffected == 1;
 		}
@@ -89,13 +75,8 @@ namespace Jaunty
 		/// <returns>Returns <c>string</c></returns>
 		public static string DeleteAsString<T, TKey>(this IDbConnection connection, TKey key, ITicket ticket = null)
 		{
-			if (connection is null)
-				throw new ArgumentNullException(nameof(connection));
-
-			IDictionary<string, object> parameter = KeyToParameter<T, TKey>(key);
-			return ticket is null
-						? BuildSql<T>(ClauseType.Delete, parameter)
-						: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameter));
+			var parameter = KeyToParameter<T, TKey>(key);
+			return Delete<T>(connection, parameter, ticket);
 		}
 
 		/// <summary>
@@ -112,15 +93,8 @@ namespace Jaunty
 		/// <returns>Returns <c>true</c> if only one row is deleted</returns>
 		public static bool Delete<T, TKey1, TKey2>(this IDbConnection connection, TKey1 key1, TKey2 key2, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (connection is null)
-				throw new ArgumentNullException(nameof(connection));
-
-			IDictionary<string, object> parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
-			string sql = ticket is null
-				? BuildSql<T>(ClauseType.Delete, parameters)
-				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			var parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
+			string sql = Delete<T>(connection, parameters, ticket);
 			int rowsAffected = connection.Execute(sql, parameters, transaction);
 			return rowsAffected == 1;
 		}
@@ -139,15 +113,8 @@ namespace Jaunty
 		/// <returns>Returns <c>true</c> if only one row is deleted</returns>
 		public static async Task<bool> DeleteAsync<T, TKey1, TKey2>(this IDbConnection connection, TKey1 key1, TKey2 key2, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (connection is null)
-				throw new ArgumentNullException(nameof(connection));
-
-			IDictionary<string, object> parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
-			string sql = ticket is null
-				? BuildSql<T>(ClauseType.Delete, parameters)
-				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			var parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
+			string sql = Delete<T>(connection, parameters, ticket);
 			int rowsAffected = await connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 			return rowsAffected == 1;
 		}
@@ -165,13 +132,8 @@ namespace Jaunty
 		/// <returns>Returns <c>true</c> if only one row is deleted</returns>
 		public static string DeleteAsString<T, TKey1, TKey2>(this IDbConnection connection, TKey1 key1, TKey2 key2, ITicket ticket = null)
 		{
-			if (connection is null)
-				throw new ArgumentNullException(nameof(connection));
-
-			IDictionary<string, object> parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
-			return ticket is null
-						? BuildSql<T>(ClauseType.Delete, parameters)
-						: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
+			var parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
+			return Delete<T>(connection, parameters, ticket);
 		}
 
 		/// <summary>
@@ -185,15 +147,8 @@ namespace Jaunty
 		/// <returns>Returns number of rows affected.</returns>
 		public static int Delete<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (expression is null)
-				throw new ArgumentNullException(nameof(expression));
-
 			var parameters = ExpressionToParameters(expression);
-			string sql = ticket is null
-					? BuildSql(ClauseType.Delete, expression)
-					: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql(ClauseType.Delete, expression));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			string sql = Delete<T>(connection, parameters, ticket);
 			return connection.Execute(sql, parameters, transaction);
 		}
 
@@ -208,15 +163,8 @@ namespace Jaunty
 		/// <returns>Returns number of rows affected.</returns>
 		public static async Task<int> DeleteAsync<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (expression is null)
-				throw new ArgumentNullException(nameof(expression));
-
 			var parameters = ExpressionToParameters(expression);
-			string sql = ticket is null
-					? BuildSql(ClauseType.Delete, expression)
-					: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql(ClauseType.Delete, expression));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			string sql = Delete<T>(connection, parameters, ticket);
 			return await connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
@@ -230,16 +178,8 @@ namespace Jaunty
 		/// <returns>Returns number of rows affected.</returns>
 		public static string DeleteAsString<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, ITicket ticket = null)
 		{
-			if (connection is null)
-				throw new ArgumentNullException(nameof(connection));
-
-			if (expression is null)
-				throw new ArgumentNullException(nameof(expression));
-
 			var parameters = ExpressionToParameters(expression);
-			return ticket is null
-					? BuildSql(ClauseType.Delete, expression)
-					: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql(ClauseType.Delete, expression));
+			return Delete<T>(connection, parameters, ticket);
 		}
 
 		/// <summary>
@@ -253,13 +193,8 @@ namespace Jaunty
 		/// <returns>Returns number of rows affected.</returns>
 		public static int DeleteAnonymous<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (nameValuePairs is null)
-				throw new ArgumentNullException(nameof(nameValuePairs));
-
 			var parameters = nameValuePairs.ToDictionary();
-			string sql = ticket is null ? BuildSql<T>(ClauseType.Delete, parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			string sql = Delete<T>(connection, parameters, ticket);
 			return connection.Execute(sql, parameters, transaction);
 		}
 
@@ -274,13 +209,8 @@ namespace Jaunty
 		/// <returns>Returns number of rows affected.</returns>
 		public static async Task<int> DeleteAnonymousAsync<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (nameValuePairs is null)
-				throw new ArgumentNullException(nameof(nameValuePairs));
-
 			var parameters = nameValuePairs.ToDictionary();
-			string sql = ticket is null ? BuildSql<T>(ClauseType.Delete, parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			string sql = Delete<T>(connection, parameters, ticket);
 			return await connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
@@ -294,11 +224,8 @@ namespace Jaunty
 		/// <returns>Returns <c>string</c></returns>
 		public static string DeleteAnonymousAsString<T>(this IDbConnection connection, object nameValuePairs, ITicket ticket = null)
 		{
-			if (nameValuePairs is null)
-				throw new ArgumentNullException(nameof(nameValuePairs));
-
 			var parameters = nameValuePairs.ToDictionary();
-			return ticket is null ? BuildSql<T>(ClauseType.Delete, parameters) : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
+			return Delete<T>(connection, parameters, ticket);
 		}
 
 		/// <summary>
@@ -311,15 +238,8 @@ namespace Jaunty
 		/// <returns>Return number of rows affected.</returns>
 		public static int Delete<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (condition is null)
-				throw new ArgumentNullException(nameof(condition));
-
-			var parameters = condition.GetParameters();
-			string sql = ticket is null
-					? ExtractSql<T>(ClauseType.Delete, condition)
-					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, condition));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			var parameters = condition?.GetParameters();
+			string sql = Delete<T>(condition, parameters, ticket);
 			return condition.Connection.Execute(sql, parameters, transaction);
 		}
 
@@ -333,15 +253,8 @@ namespace Jaunty
 		/// <returns>Return number of rows affected.</returns>
 		public static async Task<int> DeleteAsync<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (condition is null)
-				throw new ArgumentNullException(nameof(condition));
-
-			var parameters = condition.GetParameters();
-			string sql = ticket is null
-					? ExtractSql<T>(ClauseType.Delete, condition)
-					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, condition));
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			var parameters = condition?.GetParameters();
+			string sql = Delete<T>(condition, parameters, ticket);
 			return await condition.Connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
@@ -354,13 +267,35 @@ namespace Jaunty
 		/// <returns>Return number of rows affected.</returns>
 		public static string DeleteAsString<T>(this Condition condition, ITicket ticket = null)
 		{
-			if (condition is null)
-				throw new ArgumentNullException(nameof(condition));
+			var parameters = condition?.GetParameters();
+			return Delete<T>(condition, parameters, ticket);
+		}
 
-			var parameters = condition.GetParameters();
-			return ticket is null
-				   ? ExtractSql<T>(ClauseType.Delete, condition)
-				   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, condition));
+		private static string Delete<T>(IDbConnection connection, IDictionary<string, object> parameters, ITicket ticket = null)
+		{
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
+
+			string sql = ticket is null
+				? BuildSql<T>(ClauseType.Delete, parameters)
+				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
+
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnDeleting?.Invoke(ticket, eventArgs);
+			return sql;
+		}
+
+		private static string Delete<T>(Clause clause, Dictionary<string, object> parameters, ITicket ticket = null)
+		{
+			if (clause is null)
+				throw new ArgumentNullException(nameof(clause));
+
+			string sql = ticket is null
+								? ExtractSql<T>(ClauseType.Delete, clause)
+								: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, clause));
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnDeleting?.Invoke(ticket, eventArgs);
+			return sql;
 		}
 	}
 }
