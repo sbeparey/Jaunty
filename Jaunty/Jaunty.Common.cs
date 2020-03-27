@@ -101,15 +101,6 @@ namespace Jaunty
 			return string.Join(", ", columnNames);
 		}
 
-		private static string BuildSelectAllSql<T>()
-		{
-			Type type = GetType(typeof(T));
-			string sql = SqlTemplates.Select.Replace("{{columns}}", GetColumnsCache(type).Keys.ToList().ToClause(), StringComparison.OrdinalIgnoreCase)
-											.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase);
-			sql += ";";
-			return sql;
-		}
-
 		private static Dictionary<string, object> KeyToParameter<T, TKey>(TKey key)
 		{
 			Type type = GetType(typeof(T));
@@ -157,6 +148,16 @@ namespace Jaunty
 			return dictionary;
 		}
 
+		private static string BuildSelectAllSql<T>()
+		{
+			Type type = GetType(typeof(T));
+			var columns = GetColumnsCache(type).Keys.ToList();
+			string sql = SqlTemplates.Select.Replace("{{columns}}", columns.ToClause(), StringComparison.OrdinalIgnoreCase)
+											.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase);
+			sql += ";";
+			return sql;
+		}
+
 		private static string BuildSql<T>(ClauseType clauseType, Expression<Func<T, bool>> expression)
 		{
 			Type type = GetType(typeof(T));
@@ -168,47 +169,27 @@ namespace Jaunty
 				where.AppendIf(name is null, $" {oper} ");
 			});
 
-			switch (clauseType)
-			{
-				case ClauseType.Select:
-					return SqlTemplates.SelectWhere.Replace("{{columns}}", columns.ToClause(), StringComparison.OrdinalIgnoreCase)
-												   .Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
-												   .Replace("{{where}}", where.ToString(), StringComparison.OrdinalIgnoreCase);
-				case ClauseType.Delete:
-					return SqlTemplates.DeleteWhere.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
-												   .Replace("{{where}}", where.ToString(), StringComparison.OrdinalIgnoreCase);
-				case ClauseType.Update:
-					return SqlTemplates.UpdateWhere.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
-												   .Replace("{{where}}", where.ToString(), StringComparison.OrdinalIgnoreCase);
-				case ClauseType.Insert:
-					throw new NotImplementedException();
-				default:
-					throw new NotImplementedException();
-			}
+			return BuildSql(clauseType, GetTypeName(type), columns.ToClause(), where.ToString());
 		}
 
 		private static string BuildSql<T>(ClauseType clauseType, IDictionary<string, object> parameters)
 		{
 			Type type = GetType(typeof(T));
 			var columns = GetColumnsCache(type).Keys.ToList();
-
-			switch (clauseType)
-			{
-				case ClauseType.Select:
-					return SqlTemplates.SelectWhere.Replace("{{columns}}", columns.ToClause(), StringComparison.OrdinalIgnoreCase)
-												   .Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
-												   .Replace("{{where}}", parameters.ToWhereClause(), StringComparison.OrdinalIgnoreCase);
-				case ClauseType.Delete:
-					return SqlTemplates.DeleteWhere.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
-												   .Replace("{{where}}", parameters.ToWhereClause(), StringComparison.OrdinalIgnoreCase);
-				case ClauseType.Update:
-					return SqlTemplates.UpdateWhere.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
-												   .Replace("{{where}}", parameters.ToWhereClause(), StringComparison.OrdinalIgnoreCase);
-				case ClauseType.Insert:
-					throw new NotImplementedException();
-				default:
-					throw new NotImplementedException();
-			}
+			return BuildSql(clauseType, GetTypeName(type), columns.ToClause(), parameters.ToWhereClause());
 		}
+
+		private static string BuildSql(ClauseType clauseType, string name, string columns, string where) => clauseType switch
+		{
+			ClauseType.Select => SqlTemplates.SelectWhere.Replace("{{columns}}", columns, StringComparison.OrdinalIgnoreCase)
+														 .Replace("{{table}}", name, StringComparison.OrdinalIgnoreCase)
+														 .Replace("{{where}}", where, StringComparison.OrdinalIgnoreCase),
+			ClauseType.Delete => SqlTemplates.DeleteWhere.Replace("{{table}}", name, StringComparison.OrdinalIgnoreCase)
+														 .Replace("{{where}}", where, StringComparison.OrdinalIgnoreCase),
+			ClauseType.Update => SqlTemplates.UpdateWhere.Replace("{{table}}", name, StringComparison.OrdinalIgnoreCase)
+														 .Replace("{{where}}", where, StringComparison.OrdinalIgnoreCase),
+			ClauseType.Insert => throw new NotImplementedException(),
+			_ => throw new NotImplementedException()
+		};
 	}
 }
