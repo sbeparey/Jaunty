@@ -41,7 +41,7 @@ namespace Jaunty
 		public static bool Delete<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameter = KeyToParameter<T, TKey>(key);
-			string sql = Delete<T>(connection, parameter, ticket);
+			string sql = Delete<T>(connection, parameter, ticket, true);
 			int rowsAffected = connection.Execute(sql, parameter, transaction);
 			return rowsAffected == 1;
 		}
@@ -59,7 +59,7 @@ namespace Jaunty
 		public static async Task<bool> DeleteAsync<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameter = KeyToParameter<T, TKey>(key);
-			string sql = Delete<T>(connection, parameter, ticket);
+			string sql = Delete<T>(connection, parameter, ticket, true);
 			int rowsAffected = await connection.ExecuteAsync(sql, parameter, transaction).ConfigureAwait(false);
 			return rowsAffected == 1;
 		}
@@ -94,7 +94,7 @@ namespace Jaunty
 		public static bool Delete<T, TKey1, TKey2>(this IDbConnection connection, TKey1 key1, TKey2 key2, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
-			string sql = Delete<T>(connection, parameters, ticket);
+			string sql = Delete<T>(connection, parameters, ticket, true);
 			int rowsAffected = connection.Execute(sql, parameters, transaction);
 			return rowsAffected == 1;
 		}
@@ -114,7 +114,7 @@ namespace Jaunty
 		public static async Task<bool> DeleteAsync<T, TKey1, TKey2>(this IDbConnection connection, TKey1 key1, TKey2 key2, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = KeysToParameters<T, TKey1, TKey2>(key1, key2);
-			string sql = Delete<T>(connection, parameters, ticket);
+			string sql = Delete<T>(connection, parameters, ticket, true);
 			int rowsAffected = await connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 			return rowsAffected == 1;
 		}
@@ -148,7 +148,7 @@ namespace Jaunty
 		public static int Delete<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = ExpressionToParameters(expression);
-			string sql = Delete<T>(connection, parameters, ticket);
+			string sql = Delete<T>(connection, parameters, ticket, true);
 			return connection.Execute(sql, parameters, transaction);
 		}
 
@@ -164,7 +164,7 @@ namespace Jaunty
 		public static async Task<int> DeleteAsync<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = ExpressionToParameters(expression);
-			string sql = Delete<T>(connection, parameters, ticket);
+			string sql = Delete<T>(connection, parameters, ticket, true);
 			return await connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
@@ -194,7 +194,7 @@ namespace Jaunty
 		public static int DeleteAnonymous<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = nameValuePairs.ToDictionary();
-			string sql = Delete<T>(connection, parameters, ticket);
+			string sql = Delete<T>(connection, parameters, ticket, true);
 			return connection.Execute(sql, parameters, transaction);
 		}
 
@@ -210,7 +210,7 @@ namespace Jaunty
 		public static async Task<int> DeleteAnonymousAsync<T>(this IDbConnection connection, object nameValuePairs, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = nameValuePairs.ToDictionary();
-			string sql = Delete<T>(connection, parameters, ticket);
+			string sql = Delete<T>(connection, parameters, ticket, true);
 			return await connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
@@ -239,7 +239,7 @@ namespace Jaunty
 		public static int Delete<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = condition?.GetParameters();
-			string sql = Delete<T>(condition, parameters, ticket);
+			string sql = Delete<T>(condition, parameters, ticket, true);
 			return condition.Connection.Execute(sql, parameters, transaction);
 		}
 
@@ -254,7 +254,7 @@ namespace Jaunty
 		public static async Task<int> DeleteAsync<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = condition?.GetParameters();
-			string sql = Delete<T>(condition, parameters, ticket);
+			string sql = Delete<T>(condition, parameters, ticket, true);
 			return await condition.Connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
@@ -271,7 +271,7 @@ namespace Jaunty
 			return Delete<T>(condition, parameters, ticket);
 		}
 
-		private static string Delete<T>(IDbConnection connection, IDictionary<string, object> parameters, ITicket ticket = null)
+		private static string Delete<T>(IDbConnection connection, IDictionary<string, object> parameters, ITicket ticket = null, bool triggerEvent = false)
 		{
 			if (connection is null)
 				throw new ArgumentNullException(nameof(connection));
@@ -280,12 +280,15 @@ namespace Jaunty
 				? BuildSql<T>(ClauseType.Delete, parameters)
 				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Delete, parameters));
 
+			if (!triggerEvent)
+				return sql;
+
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnDeleting?.Invoke(ticket, eventArgs);
 			return sql;
 		}
 
-		private static string Delete<T>(Clause clause, Dictionary<string, object> parameters, ITicket ticket = null)
+		private static string Delete<T>(Clause clause, Dictionary<string, object> parameters, ITicket ticket = null, bool triggerEvent = false)
 		{
 			if (clause is null)
 				throw new ArgumentNullException(nameof(clause));
@@ -293,6 +296,10 @@ namespace Jaunty
 			string sql = ticket is null
 								? ExtractSql<T>(ClauseType.Delete, clause)
 								: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Delete, clause));
+
+			if (!triggerEvent)
+				return sql;
+
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnDeleting?.Invoke(ticket, eventArgs);
 			return sql;

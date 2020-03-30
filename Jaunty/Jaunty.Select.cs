@@ -26,9 +26,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/>.</returns>
 		public static IEnumerable<T> GetAll<T>(this IDbConnection connection, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			string sql = ticket is null ? BuildSelectAllSql<T>() : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectAllSql<T>());
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(connection, ticket, true);
 			return connection.Query<T>(sql: sql, transaction: transaction);
 		}
 
@@ -42,10 +40,13 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/>.</returns>
 		public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			string sql = ticket is null ? BuildSelectAllSql<T>() : _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectAllSql<T>());
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(connection, ticket, true);
 			return await connection.QueryAsync<T>(sql, transaction: transaction).ConfigureAwait(false);
+		}
+
+		public static string GetAllAsString<T>(this IDbConnection connection, ITicket ticket = null)
+		{
+			return Select<T>(connection, ticket);
 		}
 
 		/// <summary>
@@ -60,11 +61,9 @@ namespace Jaunty
 		/// <returns>Returns <see cref="T"/></returns>
 		public static T Get<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			var parameters = KeyToParameter<T, TKey>(key);
-			string sql = ticket is null ? BuildSql<T>(ClauseType.Select, parameters)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Select, parameters) );
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return connection.QuerySingleOrDefault<T>(sql, parameters, transaction);
+			var parameter = KeyToParameter<T, TKey>(key);
+			string sql = Select<T>(parameter, ticket, true);
+			return connection.QuerySingleOrDefault<T>(sql, parameter, transaction);
 		}
 
 		/// <summary>
@@ -79,11 +78,15 @@ namespace Jaunty
 		/// <returns>Returns <see cref="T"/></returns>
 		public static async Task<T> GetAsync<T, TKey>(this IDbConnection connection, TKey key, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			var parameters = KeyToParameter<T, TKey>(key);
-			string sql = ticket is null ? BuildSql<T>(ClauseType.Select, parameters)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Select, parameters) );
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
-			return await connection.QuerySingleOrDefaultAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
+			var parameter = KeyToParameter<T, TKey>(key);
+			string sql = Select<T>(parameter, ticket, true);
+			return await connection.QuerySingleOrDefaultAsync<T>(sql, parameter, transaction).ConfigureAwait(false);
+		}
+
+		public static string GetAsString<T, TKey>(this IDbConnection connection, TKey key, ITicket ticket = null)
+		{
+			var parameter = KeyToParameter<T, TKey>(key);
+			return Select<T>(parameter, ticket);
 		}
 
 		/// <summary>
@@ -98,15 +101,8 @@ namespace Jaunty
 		/// <exception cref="ArgumentNullException">expression</exception>
 		public static IEnumerable<T> Query<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (expression is null)
-			{
-				throw new ArgumentNullException(nameof(expression));
-			}
-
 			var parameters = ExpressionToParameters(expression);
-			string sql = ticket is null ? BuildSql(ClauseType.Select, expression)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql(ClauseType.Select, expression) );
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select(expression, parameters, ticket, true);
 			return connection.Query<T>(sql, parameters, transaction);
 		}
 
@@ -122,16 +118,15 @@ namespace Jaunty
 		/// <exception cref="ArgumentNullException">expression</exception>
 		public static async Task<IEnumerable<T>> QueryAsync<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (expression is null)
-			{
-				throw new ArgumentNullException(nameof(expression));
-			}
-
 			var parameters = ExpressionToParameters(expression);
-			string sql = ticket is null ? BuildSql(ClauseType.Select, expression)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql(ClauseType.Select, expression) );
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select(expression, parameters, ticket, true);
 			return await connection.QueryAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
+		}
+
+		public static string QueryAsString<T>(this IDbConnection connection, Expression<Func<T, bool>> expression, ITicket ticket = null)
+		{
+			var parameters = ExpressionToParameters(expression);
+			return Select(expression, parameters, ticket);
 		}
 
 		/// <summary>
@@ -152,9 +147,7 @@ namespace Jaunty
 			}
 
 			var parameters = nameValuePairs.ToDictionary();
-			string sql = ticket is null ? BuildSql<T>(ClauseType.Select, parameters)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Select, parameters) );
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(parameters, ticket, true);
 			return connection.Query<T>(sql, nameValuePairs, transaction);
 		}
 
@@ -177,10 +170,27 @@ namespace Jaunty
 			}
 
 			var parameters = nameValuePairs.ToDictionary();
-			string sql = ticket is null ? BuildSql<T>(ClauseType.Select, parameters)  : _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Select, parameters) );
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(parameters, ticket, true);
 			return await connection.QueryAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
+		}
+
+		/// <summary>
+		/// Gets entities by an anonymous object asynchronously.
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table or view.</typeparam>
+		/// <param name="nameValuePairs">An anonymous object.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
+		/// <exception cref="ArgumentNullException">expression</exception>
+		public static string QueryAnonymousAsString<T>(object nameValuePairs, ITicket ticket = null)
+		{
+			if (nameValuePairs is null)
+			{
+				throw new ArgumentNullException(nameof(nameValuePairs));
+			}
+
+			var parameters = nameValuePairs.ToDictionary();
+			return Select<T>(parameters, ticket);
 		}
 
 		#endregion
@@ -197,12 +207,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static IEnumerable<T> Select<T>(this From from, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (from is null)
-				throw new ArgumentNullException(nameof(from));
-
-			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, from) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, from));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(from, ticket, true);
 			return from.Connection.Query<T>(sql, null, transaction);
 		}
 
@@ -216,12 +221,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this From from, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (from is null)
-				throw new ArgumentNullException(nameof(from));
-
-			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, from) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, from));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(from, ticket, true);
 			return await from.Connection.QueryAsync<T>(sql, null, transaction).ConfigureAwait(false);
 		}
 
@@ -233,10 +233,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="String"/></returns>
 		public static string SelectAsString<T>(this From from, ITicket ticket = null)
 		{
-			if (from is null)
-				throw new ArgumentNullException(nameof(from));
-
-			return ticket is null ? ExtractSql<T>(ClauseType.Select, from) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, from));
+			return Select<T>(from, ticket, true);
 		}
 
 		/// <summary>
@@ -249,12 +246,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static IEnumerable<T> Select<T>(this JoinOn joinOn, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (joinOn is null)
-				throw new ArgumentNullException(nameof(joinOn));
-
-			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, joinOn));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(joinOn, ticket, true);
 			return joinOn.Connection.Query<T>(sql, transaction: transaction);
 		}
 
@@ -268,12 +260,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this JoinOn joinOn, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (joinOn is null)
-				throw new ArgumentNullException(nameof(joinOn));
-
-			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, joinOn));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(joinOn, ticket, true);
 			return await joinOn.Connection.QueryAsync<T>(sql, transaction: transaction).ConfigureAwait(false);
 		}
 
@@ -285,10 +272,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="string"/></returns>
 		public static string SelectAsString<T>(this JoinOn joinOn, ITicket ticket = null)
 		{
-			if (joinOn is null)
-				throw new ArgumentNullException(nameof(joinOn));
-
-			return ticket is null ? ExtractSql<T>(ClauseType.Select, joinOn) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, joinOn));
+			return Select<T>(joinOn, ticket, true);
 		}
 
 		/// <summary>
@@ -301,13 +285,8 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static IEnumerable<T> Select<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (condition is null)
-				throw new ArgumentNullException(nameof(condition));
-
-			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, condition) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, condition));
-			var parameters = condition.GetParameters();
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			var parameters = condition?.GetParameters();
+			string sql = Select<T>(condition, parameters, ticket, true);
 			return condition.Connection.Query<T>(sql, parameters, transaction);
 		}
 
@@ -321,13 +300,8 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (condition is null)
-				throw new ArgumentNullException(nameof(condition));
-
-			string sql = ticket is null ? ExtractSql<T>(ClauseType.Select, condition) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, condition));
-			var parameters = condition.GetParameters();
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			var parameters = condition?.GetParameters();
+			string sql = Select<T>(condition, parameters, ticket, true);
 			return await condition.Connection.QueryAsync<T>(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
@@ -340,10 +314,8 @@ namespace Jaunty
 		/// <returns>Returns <see cref="string"/></returns>
 		public static string SelectAsString<T>(this Condition condition, ITicket ticket = null)
 		{
-			if (condition is null)
-				throw new ArgumentNullException(nameof(condition));
-
-			return ticket is null ? ExtractSql<T>(ClauseType.Select, condition) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, condition));
+			var parameters = condition?.GetParameters();
+			return Select<T>(condition, parameters, ticket, false);
 		}
 
 		/// <summary>
@@ -357,14 +329,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static IEnumerable<T> Select<T>(this GroupBy groupBy, string selectClause, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (groupBy is null)
-				throw new ArgumentNullException(nameof(groupBy));
-
-			string sql = ticket is null
-				? ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause)
-				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(groupBy, selectClause, ticket, true);
 			return groupBy.Connection.Query<T>(sql, null, transaction);
 		}
 
@@ -378,14 +343,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this GroupBy groupBy, string selectClause, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (groupBy is null)
-				throw new ArgumentNullException(nameof(groupBy));
-
-			string sql = ticket is null
-				? ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause)
-				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(groupBy, selectClause, ticket, true);
 			return await groupBy.Connection.QueryAsync<T>(sql, null, transaction).ConfigureAwait(false);
 		}
 
@@ -399,12 +357,7 @@ namespace Jaunty
 		/// <returns></returns>
 		public static string SelectAsString<T>(this GroupBy groupBy, string selectClause, ITicket ticket = null)
 		{
-			if (groupBy is null)
-				throw new ArgumentNullException(nameof(groupBy));
-
-			return ticket is null
-				? ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause)
-				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, groupBy, selectClause: selectClause));
+			return Select<T>(groupBy, selectClause, ticket);
 		}
 
 		/// <summary>
@@ -417,14 +370,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static IEnumerable<T> Select<T>(this OrderBy orderBy, string selectClause = null, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (orderBy is null)
-				throw new ArgumentNullException(nameof(orderBy));
-
-			string sql = ticket is null
-					   ? ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause)
-					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(orderBy, selectClause, ticket, true);
 			return orderBy.Connection.Query<T>(sql: sql, transaction: transaction);
 		}
 
@@ -438,14 +384,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="IEnumerable{T}"/></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this OrderBy orderBy, string selectClause = null, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (orderBy is null)
-				throw new ArgumentNullException(nameof(orderBy));
-
-			string sql = ticket is null
-					   ? ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause)
-					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(orderBy, selectClause, ticket, true);
 			return await orderBy.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
 		}
 
@@ -458,12 +397,7 @@ namespace Jaunty
 		/// <returns>Returns <see cref="string"/></returns>
 		public static string SelectAsString<T>(this OrderBy orderBy, string selectClause = null, ITicket ticket = null)
 		{
-			if (orderBy is null)
-				throw new ArgumentNullException(nameof(orderBy));
-
-			return ticket is null
-					   ? ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause)
-					   : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, orderBy, selectClause: selectClause));
+			return Select<T>(orderBy, selectClause, ticket, true);
 		}
 
 		/// <summary>
@@ -476,12 +410,7 @@ namespace Jaunty
 		/// <returns></returns>
 		public static IEnumerable<T> Select<T>(this Limit limit, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (limit is null)
-				throw new ArgumentNullException(nameof(limit));
-
-			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, limit));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(limit, ticket, true);
 			return limit.Connection.Query<T>(sql: sql, transaction: transaction);
 		}
 
@@ -495,12 +424,7 @@ namespace Jaunty
 		/// <returns></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this Limit limit, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (limit is null)
-				throw new ArgumentNullException(nameof(limit));
-
-			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, limit));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(limit, ticket, true);
 			return await limit.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
 		}
 
@@ -513,10 +437,7 @@ namespace Jaunty
 		/// <returns></returns>
 		public static string SelectAsString<T>(this Limit limit, ITicket ticket = null)
 		{
-			if (limit is null)
-				throw new ArgumentNullException(nameof(limit));
-
-			return ticket is null ? ExtractSql<T>(ClauseType.Select, limit) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, limit));
+			return Select<T>(limit, ticket, false);
 		}
 
 		/// <summary>
@@ -529,12 +450,7 @@ namespace Jaunty
 		/// <returns></returns>
 		public static IEnumerable<T> Select<T>(this FetchFirst fetchFirst, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (fetchFirst is null)
-				throw new ArgumentNullException(nameof(fetchFirst));
-
-			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchFirst));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(fetchFirst, ticket, true);
 			return fetchFirst.Connection.Query<T>(sql: sql, transaction: transaction);
 		}
 
@@ -548,12 +464,7 @@ namespace Jaunty
 		/// <returns></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this FetchFirst fetchFirst, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (fetchFirst is null)
-				throw new ArgumentNullException(nameof(fetchFirst));
-
-			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchFirst));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(fetchFirst, ticket, true);
 			return await fetchFirst.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
 		}
 
@@ -566,10 +477,7 @@ namespace Jaunty
 		/// <returns></returns>
 		public static string SelectAsString<T>(this FetchFirst fetchFirst, ITicket ticket = null)
 		{
-			if (fetchFirst is null)
-				throw new ArgumentNullException(nameof(fetchFirst));
-
-			return ticket is null ? ExtractSql<T>(ClauseType.Select, fetchFirst) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchFirst));
+			return Select<T>(fetchFirst, ticket, false);
 		}
 
 		/// <summary>
@@ -582,12 +490,7 @@ namespace Jaunty
 		/// <returns></returns>
 		public static IEnumerable<T> Select<T>(this FetchNext fetchNext, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (fetchNext is null)
-				throw new ArgumentNullException(nameof(fetchNext));
-
-			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchNext));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(fetchNext, ticket, true);
 			return fetchNext.Connection.Query<T>(sql: sql, transaction: transaction);
 		}
 
@@ -601,12 +504,7 @@ namespace Jaunty
 		/// <returns></returns>
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this FetchNext fetchNext, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (fetchNext is null)
-				throw new ArgumentNullException(nameof(fetchNext));
-
-			var sql = ticket is null ? ExtractSql<T>(ClauseType.Select, fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchNext));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(fetchNext, ticket, true);
 			return await fetchNext.Connection.QueryAsync<T>(sql: sql, transaction: transaction).ConfigureAwait(false);
 		}
 
@@ -619,36 +517,24 @@ namespace Jaunty
 		/// <returns></returns>
 		public static string SelectAsString<T>(this FetchNext fetchNext, ITicket ticket = null)
 		{
-			if (fetchNext is null)
-				throw new ArgumentNullException(nameof(fetchNext));
-
-			return ticket is null ? ExtractSql<T>(ClauseType.Select, fetchNext) : _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, fetchNext));
+			return Select<T>(fetchNext, ticket, true);
 		}
 
 		public static IEnumerable<T> Select<T>(this Having having, string clause, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (having is null)
-				throw new ArgumentNullException(nameof(having));
-
-			var sql = ticket is null
-					? ExtractSql<T>(ClauseType.Select, having, selectClause: clause)
-					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, having, selectClause: clause));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(having, clause, ticket, true);
 			return having.Connection.Query<T>(sql, null, transaction);
 		}
 
 		public static async Task<IEnumerable<T>> SelectAsync<T>(this Having having, string clause, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (having is null)
-				throw new ArgumentNullException(nameof(having));
-
-			var sql = ticket is null
-					? ExtractSql<T>(ClauseType.Select, having, selectClause: clause)
-					: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, having, selectClause: clause));
-			var eventArgs = new SqlEventArgs { Sql = sql };
-			OnSelecting?.Invoke(ticket, eventArgs);
+			string sql = Select<T>(having, clause, ticket, true);
 			return await having.Connection.QueryAsync<T>(sql, null, transaction).ConfigureAwait(false);
+		}
+
+		public static string SelectAsString<T>(this Having having, string clause, ITicket ticket = null)
+		{
+			return Select<T>(having, clause, ticket, false);
 		}
 
 		#endregion
@@ -791,16 +677,118 @@ namespace Jaunty
 			return orderBy;
 		}
 
-		//private static string BuildSelectSql<T>()
-		//{
-		//	Type type = GetType(typeof(T));
-		//	var keys = GetKeysCache(type).Keys.ToList();
-		//	var columns = GetColumnsCache(type).Keys.ToList().ToClause();
+		private static string Select<T>(IDbConnection connection, ITicket ticket = null, bool triggerEvent = false)
+		{
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
 
-		//	return SqlTemplates.SelectWhere.Replace("{{columns}}", columns, StringComparison.OrdinalIgnoreCase)
-		//								   .Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
-		//								   .Replace("{{where}}", keys.ToWhereClause(), StringComparison.OrdinalIgnoreCase);
-		//}
+			string sql = ticket is null
+						? BuildSelectAllSql<T>()
+						: _queriesCache.GetOrAdd(ticket.Id, q => BuildSelectAllSql<T>());
+
+			if (!triggerEvent)
+				return sql;
+
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return sql;
+		}
+
+		private static string Select<T>(Dictionary<string, object> parameters, ITicket ticket = null, bool triggerEvent = false)
+		{
+			if (parameters is null)
+				throw new ArgumentNullException(nameof(parameters));
+
+			if (parameters.Count <= 0)
+				throw new ArgumentOutOfRangeException(nameof(parameters));
+
+			string sql = ticket is null
+				? BuildSql<T>(ClauseType.Select, parameters)
+				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Select, parameters));
+
+			if (!triggerEvent)
+				return sql;
+
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return sql;
+		}
+
+		private static string Select<T>(Expression<Func<T, bool>> expression, Dictionary<string, object> parameters, ITicket ticket, bool triggerEvent = false)
+		{
+			if (expression is null)
+			{
+				throw new ArgumentNullException(nameof(expression));
+			}
+
+			string sql = ticket is null
+				? BuildSql(ClauseType.Select, expression)
+				: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql(ClauseType.Select, expression));
+
+			if (!triggerEvent)
+				return sql;
+
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return sql;
+		}
+
+		private static string Select<T>(Clause clause, ITicket ticket, bool triggerEvent = false)
+		{
+			if (clause is null)
+				throw new ArgumentNullException(nameof(clause));
+
+			string sql = ticket is null
+				? ExtractSql<T>(ClauseType.Select, clause)
+				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, clause));
+
+			if (!triggerEvent)
+				return sql;
+
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return sql;
+		}
+
+		private static string Select<T>(Condition condition, Dictionary<string, object> parameters, ITicket ticket = null, bool triggerEvent = false)
+		{
+			if (condition is null)
+				throw new ArgumentNullException(nameof(condition));
+
+			if (parameters is null)
+				throw new ArgumentNullException(nameof(parameters));
+
+			if (parameters.Count <= 0)
+				throw new ArgumentOutOfRangeException(nameof(parameters));
+
+			string sql = ticket is null
+				? ExtractSql<T>(ClauseType.Select, condition)
+				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, condition));
+
+			if (!triggerEvent)
+				return sql;
+
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return sql;
+		}
+
+		private static string Select<T>(Clause clause, string selectClause, ITicket ticket = null, bool triggerEvent = false)
+		{
+			if (clause is null)
+				throw new ArgumentNullException(nameof(clause));
+
+			string sql = ticket is null
+				? ExtractSql<T>(ClauseType.Select, clause, selectClause: selectClause)
+				: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Select, clause, selectClause: selectClause));
+
+			if (!triggerEvent)
+				return sql;
+
+			var eventArgs = new SqlEventArgs { Sql = sql };
+			OnSelecting?.Invoke(ticket, eventArgs);
+			return sql;
+		}
 
 		#endregion
 	}
