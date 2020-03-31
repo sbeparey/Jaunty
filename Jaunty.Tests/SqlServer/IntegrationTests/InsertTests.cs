@@ -1,29 +1,46 @@
-﻿using System;
+﻿using Jaunty.Tests.Entities;
+
+using Pluralize.NET;
+
+using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
-using Entities;
+
 using Xunit;
+using Xunit.Abstractions;
 
-namespace Speedy.Tests.IntegrationTests.SqlServer
+namespace Jaunty.Tests.SqlServer.IntegrationTests
 {
-	public class InsertTests
+	[Collection("sql server tests")]
+	public class InsertTests : IClassFixture<Northwind>
 	{
-		private readonly IDbConnection connection;
+		private readonly ITestOutputHelper output;
+		private readonly Northwind northwind;
+		IPluralize pluralize = new Pluralizer();
 
-		public InsertTests()
+		public InsertTests(ITestOutputHelper output, Northwind northwind)
 		{
-			var connectionString = "server=.;database=Northwind;trusted_connection=true;";
-			connection = new SqlConnection(connectionString);
-			var pluralizer = new Pluralizer();
-			Speedy.Pluralize = pluralizer.Pluralize;
+			this.output = output;
+			Jaunty.SqlDialect = Jaunty.Dialect.SqlServer;
+			this.northwind = northwind;
+			Jaunty.TableNameMapper += GetEntityName;
+		}
+
+		private string GetEntityName(Type type)
+		{
+			if (type == typeof(CustomerCustomerDemo))
+				return "CustomerCustomerDemo";
+			if (type == typeof(OrderDetail))
+				return "\"Order Details\"";
+			if (type == typeof(Region))
+				return "Region";
+			return pluralize.Pluralize(type.Name);
 		}
 
 		[Fact]
 		public void Insert()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("insert a product");
 			var product = new Product
 			{
 				ProductName = "Latte",
@@ -38,15 +55,12 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 			};
 
 			string sql = null;
-			Speedy.OnInserting += (sender, args) =>
+			Jaunty.OnInserting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
+				sql = args.Sql;
 			};
 
-			bool success = connection.Insert(product, token: guid);
+			bool success = northwind.Connection.Insert(product, ticket: ticket);
 
 			Assert.Equal("INSERT INTO Products (ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 													   "UnitsOnOrder, ReorderLevel, Discontinued) " +
@@ -58,7 +72,7 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 		[Fact]
 		public void InsertAndReturnThePrimaryKey()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("insert a product return the primary key");
 			var product = new Product
 			{
 				ProductName = "Chai Latte",
@@ -73,15 +87,12 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 			};
 
 			string sql = null;
-			Speedy.OnInserting += (sender, args) =>
+			Jaunty.OnInserting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
+				sql = args.Sql;
 			};
 
-			int productId = connection.Insert<Product, int>(product, token: guid);
+			int productId = northwind.Connection.Insert<Product, int>(product, ticket: ticket);
 
 			Assert.Equal("INSERT INTO Products (ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 													   "UnitsOnOrder, ReorderLevel, Discontinued) " +
@@ -94,34 +105,31 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 		[Fact]
 		public void InsertUsingStringKey()
 		{
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("insert customer demographics");
 			var customerDemographic = new CustomerDemographic
 			{
 				CustomerTypeId = "Potential",
-				CustomerDesc = "Potential customers"
+				CustomerDescription = "Potential customers"
 			};
 
 			string sql = null;
 			IDictionary<string, object> parameters = null;
-			Speedy.OnInserting += (sender, args) =>
+			Jaunty.OnInserting += (sender, args) =>
 			{
-				if (((Guid) sender).Equals(guid))
-				{
-					sql = args.Sql;
-					parameters = args.Parameters;
-				}
+				sql = args.Sql;
+				parameters = args.Parameters;
 			};
 
-			connection.Delete<CustomerDemographic, string>(customerDemographic.CustomerTypeId);
+			northwind.Connection.Delete<CustomerDemographic, string>(customerDemographic.CustomerTypeId);
 
-			bool success = connection.Insert(customerDemographic, token: guid);
+			bool success = northwind.Connection.Insert(customerDemographic, ticket: ticket);
 
-			Assert.Equal("INSERT INTO CustomerDemographics (CustomerTypeId, CustomerDesc) " +
-			             "VALUES (@CustomerTypeId, @CustomerDesc);", sql);
+			Assert.Equal("INSERT INTO CustomerDemographics (CustomerTypeId, CustomerDescription) " +
+						 "VALUES (@CustomerTypeId, @CustomerDescription);", sql);
 			Assert.NotEmpty(parameters);
 			Assert.Equal("CustomerTypeId", parameters.ElementAt(0).Key);
 			Assert.Equal("Potential", parameters.ElementAt(0).Value);
-			Assert.Equal("CustomerDesc", parameters.ElementAt(1).Key);
+			Assert.Equal("CustomerDescription", parameters.ElementAt(1).Key);
 			Assert.Equal("Potential customers", parameters.ElementAt(1).Value);
 
 			Assert.True(success);
@@ -169,7 +177,7 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 				UnitsOnOrder = 0
 			};
 
-			var guid = Guid.NewGuid();
+			var ticket = new Ticket("");
 			var products = new List<Product>
 			{
 				product,
@@ -178,15 +186,12 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 			};
 
 			string sql = null;
-			Speedy.OnInserting += (sender, args) =>
+			Jaunty.OnInserting += (sender, args) =>
 			{
-				if (((Guid)sender).Equals(guid))
-				{
-					sql = args.Sql;
-				}
+				sql = args.Sql;
 			};
 
-			int rowsAffected = connection.InsertUnion(products, token: guid);
+			int rowsAffected = northwind.Connection.InsertUnion(products, null, ticket);
 
 			Assert.Equal("INSERT INTO Products (ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
 													   "UnitsOnOrder, ReorderLevel, Discontinued) \n" +

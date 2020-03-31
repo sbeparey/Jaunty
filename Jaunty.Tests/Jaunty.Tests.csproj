@@ -12,7 +12,6 @@
 		<Compile Remove="Postgres\IntegrationTests\SelectTests.cs" />
 		<Compile Remove="Postgres\IntegrationTests\UpdateTests.cs" />
 		<Compile Remove="Sqlite\IntegrationTests\SelectTests.cs" />
-		<Compile Remove="SqlServer\IntegrationTests\InsertTests.cs" />
 		<Compile Remove="SqlServer\IntegrationTests\UpdateTests.cs" />
 	</ItemGroup>
 	<ItemGroup>

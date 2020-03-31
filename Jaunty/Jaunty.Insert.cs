@@ -1,5 +1,6 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using Dapper;
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
@@ -7,18 +8,10 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-using Dapper;
-
 namespace Jaunty
 {
 	public static partial class Jaunty
 	{
-		private static readonly ConcurrentDictionary<RuntimeTypeHandle, string> insertQueryCache =
-			new ConcurrentDictionary<RuntimeTypeHandle, string>();
-
-		private static readonly ConcurrentDictionary<RuntimeTypeHandle, string> insertSelectKeyQueryCache =
-			new ConcurrentDictionary<RuntimeTypeHandle, string>();
-
 		public static event EventHandler<SqlEventArgs> OnInserting;
 
 		/// <summary>
@@ -28,22 +21,69 @@ namespace Jaunty
 		/// <param name="connection">The connection to query on.</param>
 		/// <param name="entity">The entity to insert.</param>
 		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <returns>Returns <c>true</c> if only one row is inserted.</returns>
+		/// <exception cref="ArgumentNullException">connection</exception>
 		/// <exception cref="ArgumentNullException">entity</exception>
-		public static bool Insert<T>(this IDbConnection connection, T entity, object token = null,
-			IDbTransaction transaction = null)
+		public static bool Insert<T>(this IDbConnection connection, T entity, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (entity is null)
-			{
-				throw new ArgumentNullException(nameof(entity));
-			}
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
 
-			string sql = BuildInsertSql<T>();
+			if (entity is null)
+				throw new ArgumentNullException(nameof(entity));
+
 			var parameters = ConvertToParameters(entity);
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnInserting?.Invoke(token, eventArgs);
+			string sql = Insert<T>(parameters, false, ticket, true);
 			int rowsAffected = connection.Execute(sql, parameters, transaction);
 			return rowsAffected == 1;
+		}
+
+		/// <summary>
+		/// Inserts the specified entity asynchronously.
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <param name="connection">The connection to query on.</param>
+		/// <param name="entity">The entity to insert.</param>
+		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Returns <c>true</c> if only one row is inserted.</returns>
+		/// <exception cref="ArgumentNullException">connection</exception>
+		/// <exception cref="ArgumentNullException">entity</exception>
+		public static async Task<bool> InsertAsync<T>(this IDbConnection connection, T entity, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
+
+			if (entity is null)
+				throw new ArgumentNullException(nameof(entity));
+
+			var parameters = ConvertToParameters(entity);
+			string sql = Insert<T>(parameters, false, ticket, true);
+			int rowsAffected = await connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
+			return rowsAffected == 1;
+		}
+
+		/// <summary>
+		/// Generates a SQL string for Inserting an entity.
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <param name="connection">The connection to query on.</param>
+		/// <param name="entity">The entity to insert.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Returns string.</returns>
+		/// <exception cref="ArgumentNullException">connection</exception>
+		/// <exception cref="ArgumentNullException">entity</exception>
+		public static string InsertAsString<T>(this IDbConnection connection, T entity, ITicket ticket = null)
+		{
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
+
+			if (entity is null)
+				throw new ArgumentNullException(nameof(entity));
+
+			var parameters = ConvertToParameters(entity);
+			return Insert<T>(parameters, false, ticket);
 		}
 
 		/// <summary>
@@ -54,48 +94,22 @@ namespace Jaunty
 		/// <param name="connection">The connection to query on.</param>
 		/// <param name="entity">The entity to insert.</param>
 		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <returns>Returns the primary key of the entity once inserted successfully</returns>
+		/// <exception cref="ArgumentNullException">connection</exception>
 		/// <exception cref="ArgumentNullException">entity</exception>
-		public static TKey Insert<T, TKey>(this IDbConnection connection, T entity, object token = null,
-			IDbTransaction transaction = null)
+		public static TKey Insert<T, TKey>(this IDbConnection connection, T entity, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (entity is null)
-			{
-				throw new ArgumentNullException(nameof(entity));
-			}
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
 
-			string sql = BuildInsertSql<T>(true);
+			if (entity is null)
+				throw new ArgumentNullException(nameof(entity));
+
 			var parameters = ConvertToParameters(entity);
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnInserting?.Invoke(token, eventArgs);
+			string sql = Insert<T>(parameters, true, ticket, true);
+			connection.Execute(sql, parameters, transaction);
 			return connection.QuerySingle<TKey>(sql, parameters, transaction);
-		}
-
-		#region async
-
-		/// <summary>
-		/// Inserts the specified entity asynchronously.
-		/// </summary>
-		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="connection">The connection to query on.</param>
-		/// <param name="entity">The entity to insert.</param>
-		/// <param name="transaction">The transaction (optional).</param>
-		/// <returns>Returns <c>true</c> if only one row is inserted.</returns>
-		/// <exception cref="ArgumentNullException">entity</exception>
-		public static async Task<bool> InsertAsync<T>(this IDbConnection connection, T entity, object token = null,
-			IDbTransaction transaction = null)
-		{
-			if (entity is null)
-			{
-				throw new ArgumentNullException(nameof(entity));
-			}
-
-			string sql = BuildInsertSql<T>();
-			var parameters = ConvertToParameters(entity);
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnInserting?.Invoke(token, eventArgs);
-			int rowsAffected = await connection.ExecuteAsync(sql, parameters, transaction);
-			return rowsAffected == 1;
 		}
 
 		/// <summary>
@@ -106,39 +120,69 @@ namespace Jaunty
 		/// <param name="connection">The connection to query on.</param>
 		/// <param name="entity">The entity to insert.</param>
 		/// <param name="transaction">The transaction (optional).</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
 		/// <returns>Returns the primary key of the entity once inserted successfully</returns>
+		/// <exception cref="ArgumentNullException">connection</exception>
 		/// <exception cref="ArgumentNullException">entity</exception>
-		public static async Task<TKey> InsertAsync<T, TKey>(this IDbConnection connection, T entity,
-			object token = null, IDbTransaction transaction = null)
+		public static async Task<TKey> InsertAsync<T, TKey>(this IDbConnection connection, T entity, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (entity is null)
-			{
-				throw new ArgumentNullException(nameof(entity));
-			}
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
 
-			string sql = BuildInsertSql<T>(true);
+			if (entity is null)
+				throw new ArgumentNullException(nameof(entity));
+
 			var parameters = ConvertToParameters(entity);
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnInserting?.Invoke(token, eventArgs);
-			return await connection.QuerySingleAsync<TKey>(sql, parameters, transaction);
+			string sql = Insert<T>(parameters, true, ticket, true);
+			connection.Execute(sql, parameters, transaction);
+			return await connection.QuerySingleAsync<TKey>(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
-		#endregion
+		/// <summary>
+		/// Generates a SQL string for Inserting an entity.
+		/// </summary>
+		/// <typeparam name="T">The type representing the database table.</typeparam>
+		/// <param name="connection">The connection to query on.</param>
+		/// <param name="entity">The entity to insert.</param>
+		/// <param name="ticket">An ITicket to uniquely id the query.</param>
+		/// <returns>Returns string</returns>
+		/// <exception cref="ArgumentNullException">connection</exception>
+		/// <exception cref="ArgumentNullException">entity</exception>
+		public static string InsertAsString<T, TKey>(this IDbConnection connection, T entity, ITicket ticket = null)
+		{
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
+
+			if (entity is null)
+				throw new ArgumentNullException(nameof(entity));
+
+			var parameters = ConvertToParameters(entity);
+			return Insert<T>(parameters, true, ticket);
+		}
+
+		private static string Insert<T>(IDictionary<string, object> parameters, bool returnScopeId, ITicket ticket = null, bool triggerEvent = false)
+		{
+			if (parameters is null)
+				throw new ArgumentNullException(nameof(parameters));
+
+			if (parameters.Count <= 0)
+				throw new ArgumentOutOfRangeException(nameof(parameters));
+
+			string sql = ticket is null
+						? BuildInsertSql<T>(returnScopeId)
+						: _queriesCache.GetOrAdd(ticket.Id, q => BuildInsertSql<T>(returnScopeId));
+
+			if (!triggerEvent)
+				return sql;
+
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnInserting?.Invoke(ticket, eventArgs);
+			return sql;
+		}
 
 		private static string BuildInsertSql<T>(bool returnId = false)
 		{
 			Type type = GetType(typeof(T));
-
-			if (!returnId && insertQueryCache.TryGetValue(type.TypeHandle, out string insertQuery))
-			{
-				return insertQuery;
-			}
-
-			if (returnId && insertSelectKeyQueryCache.TryGetValue(type.TypeHandle, out string insertSelectQuery))
-			{
-				return insertSelectQuery;
-			}
-
 			var keys = GetKeysCache(type);
 			var columns = GetColumnsCache(type).Keys.ToList();
 
@@ -172,15 +216,15 @@ namespace Jaunty
 		private static string BuildInsertSql(Type type, IList<string> columns, string keyColumnName, bool returnId)
 		{
 			List<string> paramsList = columns.ForEach(x => ParameterFormatter?.Invoke(x) ?? $"@{x}");
-			var sql = SqlTemplates.Insert.Trim().Replace("{{table}}", GetTypeName(type))
-												.Replace("{{columns}}", columns.ToClause())
-												.Replace("{{parameters}}", paramsList.ToClause());
+			var sql = SqlTemplates.Insert.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
+										 .Replace("{{columns}}", columns.ToClause(), StringComparison.OrdinalIgnoreCase)
+										 .Replace("{{parameters}}", paramsList.ToClause(), StringComparison.OrdinalIgnoreCase);
 
 			if (returnId)
 			{
 				string selectId = SqlDialect switch
 				{
-					Dialect.Postgres => SqlTemplates.Postgres.InsertedPrimaryKey.Replace("{{id}}", keyColumnName),
+					Dialect.Postgres => SqlTemplates.Postgres.InsertedPrimaryKey.Replace("{{id}}", keyColumnName, StringComparison.OrdinalIgnoreCase),
 					Dialect.SqlLite => SqlTemplates.Sqlite.InsertedPrimaryKey,
 					Dialect.MySql => SqlTemplates.MySql.InsertedPrimaryKey,
 					Dialect.SqlServer => SqlTemplates.SqlServer.InsertedPrimaryKey,
@@ -194,10 +238,6 @@ namespace Jaunty
 				sql += ";";
 			}
 
-			if (!returnId)
-				insertQueryCache[type.TypeHandle] = sql;
-			else
-				insertSelectKeyQueryCache[type.TypeHandle] = sql;
 			return sql;
 		}
 	}
