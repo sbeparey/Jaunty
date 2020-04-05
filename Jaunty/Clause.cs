@@ -349,7 +349,7 @@ namespace Jaunty
 			Sets = new Dictionary<string, object>();
 		}
 
-		internal IDictionary<string, object> Sets { get; private set; }
+		internal IDictionary<string, object> Sets { get; }
 
 		internal void Add<TValue>(string column, TValue value)
 		{
@@ -360,19 +360,9 @@ namespace Jaunty
 			Sets.Add(column, value);
 		}
 
-		internal string ToSetClause()
-		{
-			return ToString();
-		}
-
-		public override string ToString()
-		{
-			return Sets.ToSetClause();
-		}
-
 		internal override string ToSql()
 		{
-			return "";
+			return $"SET {Sets.ToSetClause()}";
 		}
 	}
 

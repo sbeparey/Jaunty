@@ -29,7 +29,6 @@ namespace Jaunty
 				clause = clause.PreviousClause;
 			}
 
-			string columns = selectClause ?? GetFormattedColumns(type, selectedAlias ?? (hasJoin ? GetTypeName(type) : null));
 			var builder = new StringBuilder();
 
 			switch (clauseType)
@@ -48,6 +47,18 @@ namespace Jaunty
 					break;
 			}
 
+			string entity = GetTypeName(type);
+			string columns = selectClause;
+
+			switch (clauseType)
+			{
+				case ClauseType.Select:
+					columns ??= GetFormattedColumns(type, selectedAlias ?? (hasJoin ? entity : null));
+					break;
+				default:
+					break;
+			}
+
 			if (hasDistinct || hasTop)
 			{
 				sql = sql.InsertBefore("FROM", columns + " ");
@@ -61,8 +72,10 @@ namespace Jaunty
 						builder.Append(columns + " " + sql);
 						break;
 					case ClauseType.Delete:
-					case ClauseType.Update:
 						builder.Append(sql);
+						break;
+					case ClauseType.Update:
+						builder.Append(entity + " " + sql);
 						break;
 					case ClauseType.Insert:
 						break;
@@ -175,7 +188,15 @@ namespace Jaunty
 		private static string BuildSql<T>(ClauseType clauseType, IDictionary<string, object> parameters)
 		{
 			Type type = GetType(typeof(T));
+			var keys = GetKeysCache(type).Keys.ToList();
 			var columns = GetColumnsCache(type).Keys.ToList();
+			
+			if (clauseType == ClauseType.Update)
+			{
+				columns.Reduce(keys);
+				return BuildSql(clauseType, GetTypeName(type), columns.ToSetClause(), keys.ToWhereClause());
+			}
+
 			return BuildSql(clauseType, GetTypeName(type), columns.ToClause(), parameters.ToWhereClause());
 		}
 
@@ -187,6 +208,7 @@ namespace Jaunty
 			ClauseType.Delete => SqlTemplates.DeleteWhere.Replace("{{table}}", name, StringComparison.OrdinalIgnoreCase)
 														 .Replace("{{where}}", where, StringComparison.OrdinalIgnoreCase),
 			ClauseType.Update => SqlTemplates.UpdateWhere.Replace("{{table}}", name, StringComparison.OrdinalIgnoreCase)
+														 .Replace("{{columns}}", columns, StringComparison.OrdinalIgnoreCase)
 														 .Replace("{{where}}", where, StringComparison.OrdinalIgnoreCase),
 			ClauseType.Insert => throw new NotImplementedException(),
 			_ => throw new NotImplementedException()

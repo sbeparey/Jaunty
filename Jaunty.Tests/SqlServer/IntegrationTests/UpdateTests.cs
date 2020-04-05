@@ -1,34 +1,53 @@
-﻿using System.Collections.Generic;
-using System.Data;
+﻿using Jaunty.Tests.Entities;
+
+using Pluralize.NET;
+
+using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
-using Entities;
+
 using Xunit;
+using Xunit.Abstractions;
 
-namespace Speedy.Tests.IntegrationTests.SqlServer
+namespace Jaunty.Tests.SqlServer.IntegrationTests
 {
-	public class UpdateTests
+	[Collection("sql server tests")]
+	public class UpdateTests : IClassFixture<Northwind>
 	{
-		private readonly IDbConnection connection;
+		private readonly ITestOutputHelper output;
+		private readonly Northwind northwind;
+		IPluralize pluralize = new Pluralizer();
 
-		public UpdateTests()
+		public UpdateTests(ITestOutputHelper output, Northwind northwind)
 		{
-			var connectionString = "server=.;database=Northwind;trusted_connection=true;";
-			connection = new SqlConnection(connectionString);
-			var pluralizer = new Pluralizer();
-			Speedy.Pluralize = pluralizer.Pluralize;
+			this.output = output;
+			Jaunty.SqlDialect = Jaunty.Dialect.SqlServer;
+			this.northwind = northwind;
+			Jaunty.TableNameMapper += GetEntityName;
+		}
+
+		private string GetEntityName(Type type)
+		{
+			if (type == typeof(CustomerCustomerDemo))
+				return "CustomerCustomerDemo";
+			if (type == typeof(OrderDetail))
+				return "\"Order Details\"";
+			if (type == typeof(Region))
+				return "Region";
+			return pluralize.Pluralize(type.Name);
 		}
 
 		[Fact]
 		public void UpdateEntity()
 		{
-			Product product = connection.Get<Product, int>(1);
+			Product product = northwind.Connection.Get<Product, int>(1);
 			product.ProductName = "Coffee";
 
 			string sql = null;
-			Speedy.OnUpdating += e => sql = e.Sql;
+			Jaunty.OnUpdating += e => sql = e.Sql;
 
-			bool success = connection.Update(product);
+			bool success = northwind.Connection.Update(product);
 
 			Assert.Equal("UPDATE Products " +
 								 "SET ProductName = @ProductName, " +
@@ -49,13 +68,13 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
-			Speedy.OnUpdating += e =>
+			Jaunty.OnUpdating += e =>
 			{
 				sql = e.Sql;
 				parameters = e.Parameters;
 			};
 
-			int rowsAffected = connection
+			int rowsAffected = northwind.Connection
 								.Set(Products.ProductName, "Chai latte")
 								.Where(Products.ProductId, 1)
 								.Update<Product>();
@@ -72,7 +91,7 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 		[Fact]
 		public void UpdateEntityColumnToNull()
 		{
-			Assert.Throws<SqlException>(() => connection
+			Assert.Throws<SqlException>(() => northwind.Connection
 														.Set("ProductName", (string)null)
 														.Where("ProductId", 1)
 														.Update<Product>());
@@ -83,13 +102,13 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
-			Speedy.OnUpdating += e =>
+			Jaunty.OnUpdating += e =>
 			{
 				sql = e.Sql;
 				parameters = e.Parameters;
 			};
 
-			int rowsAffected = connection
+			int rowsAffected = northwind.Connection
 								.Set("ProductName", "Chang 2")
 								.Set("UnitPrice", 24m)
 								.Where("ProductName", "Chang")
@@ -119,13 +138,13 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
-			Speedy.OnUpdating += e =>
+			Jaunty.OnUpdating += e =>
 			{
 				sql = e.Sql;
 				parameters = e.Parameters;
 			};
 
-			int rowsAffected = connection
+			int rowsAffected = northwind.Connection
 								.Set("UnitPrice", 24.01m)
 								.Where("UnitPrice").EqualTo(24m)
 								.Update<Product>();
@@ -136,7 +155,7 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 			Assert.Equal(24.01m, parameters.ElementAt(0).Value);
 			Assert.Equal("UnitPrice$", parameters.ElementAt(1).Key);
 			Assert.Equal(24m, parameters.ElementAt(1).Value);
-			Assert.True(rowsAffected == 0);
+			Assert.True(rowsAffected == 1);
 		}
 
 		[Fact]
@@ -144,13 +163,13 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
-			Speedy.OnUpdating += e =>
+			Jaunty.OnUpdating += e =>
 			{
 				sql = e.Sql;
 				parameters = e.Parameters;
 			};
 
-			int rowsAffected = connection
+			int rowsAffected = northwind.Connection
 								.Set("UnitPrice", 24.01m)
 								.Where("UnitPrice").EqualTo(24m)
 								.AndWhere("UnitsInStock").GreaterThan(12)
@@ -175,13 +194,13 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
-			Speedy.OnUpdating += e =>
+			Jaunty.OnUpdating += e =>
 			{
 				sql = e.Sql;
 				parameters = e.Parameters;
 			};
 
-			int rowsAffected = connection
+			int rowsAffected = northwind.Connection
 				.Set("UnitPrice", 24.01m)
 				.Where("UnitPrice").EqualTo(12m)
 				.AndWhere("UnitsInStock").EqualTo(2)
@@ -210,13 +229,13 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
-			Speedy.OnUpdating += e =>
+			Jaunty.OnUpdating += e =>
 			{
 				sql = e.Sql;
 				parameters = e.Parameters;
 			};
 
-			int rowsAffected = connection
+			int rowsAffected = northwind.Connection
 								.Set<Product>(x => x.ProductName == "Chai")
 								.Where<Product>(x => x.ProductId == 1)
 								.Update<Product>();
@@ -234,13 +253,13 @@ namespace Speedy.Tests.IntegrationTests.SqlServer
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
-			Speedy.OnUpdating += e =>
+			Jaunty.OnUpdating += e =>
 			{
 				sql = e.Sql;
 				parameters = e.Parameters;
 			};
 
-			int rowsAffected = connection
+			int rowsAffected = northwind.Connection
 								.Set<Product>(x => x.ProductName == "Chai")
 								.Where<Product>(x => x.ProductId != 10 && x.CategoryId == 20)
 								.Update<Product>();

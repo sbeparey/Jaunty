@@ -140,7 +140,7 @@ namespace Jaunty
 		{
 			var hasCompilerGeneratedAttribute =
 				type.GetCustomAttributes(typeof(CompilerGeneratedAttribute), false).Any();
-			var nameContainsAnonymousType = type.FullName != null && type.FullName.Contains("AnonymousType");
+			var nameContainsAnonymousType = type.FullName != null && type.FullName.Contains("AnonymousType", StringComparison.OrdinalIgnoreCase);
 			return hasCompilerGeneratedAttribute && nameContainsAnonymousType;
 		}
 
@@ -250,6 +250,7 @@ namespace Jaunty
 
 			for (var i = 0; i < columnsList.Count; i++)
 			{
+				// Todo: double check the replaces;
 				var parameterName = Jaunty.ParameterFormatter?.Invoke(columnsList[i]) ?? $"@{columnsList[i]}";
 				columnsList[i] = columnsList[i].Replace("#", ".", StringComparison.CurrentCultureIgnoreCase);
 				columnsList[i] = columnsList[i].Replace("$", "", StringComparison.CurrentCultureIgnoreCase);

@@ -1,11 +1,10 @@
-﻿using System;
+﻿using Dapper;
+
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using System.Linq;
-
-using Dapper;
 
 namespace Jaunty
 {
@@ -22,15 +21,16 @@ namespace Jaunty
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <c>true</c> if only one row is updated.</returns>
 		/// <exception cref="ArgumentNullException">entity</exception>
-		public static bool Update<T>(this IDbConnection connection, T entity, IDbTransaction transaction = null)
+		public static bool Update<T>(this IDbConnection connection, T entity, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (entity is null)
-			{
-				throw new ArgumentNullException(nameof(entity));
-			}
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
 
-			string sql = BuildUpdateSql<T>();
-			OnUpdating?.Invoke(new SqlEventArgs { Sql = sql });
+			if (entity is null)
+				throw new ArgumentNullException(nameof(entity));
+
+			var parameters = ConvertToParameters(entity);
+			string sql = Update<T>(parameters, ticket, true);
 			int rowsAffected = connection.Execute(sql, entity, transaction);
 			return rowsAffected == 1;
 		}
@@ -44,16 +44,17 @@ namespace Jaunty
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns <c>true</c> if only one row is updated.</returns>
 		/// <exception cref="ArgumentNullException">entity</exception>
-		public static async Task<bool> UpdateAsync<T>(this IDbConnection connection, T entity, IDbTransaction transaction = null)
+		public static async Task<bool> UpdateAsync<T>(this IDbConnection connection, T entity, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			if (entity is null)
-			{
-				throw new ArgumentNullException(nameof(entity));
-			}
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
 
-			string sql = BuildUpdateSql<T>();
-			OnUpdating?.Invoke(new SqlEventArgs { Sql = sql });
-			int rowsAffected = await connection.ExecuteAsync(sql, entity, transaction);
+			if (entity is null)
+				throw new ArgumentNullException(nameof(entity));
+
+			var parameters = ConvertToParameters(entity);
+			string sql = Update<T>(parameters, ticket, true);
+			int rowsAffected = await connection.ExecuteAsync(sql, entity, transaction).ConfigureAwait(false);
 			return rowsAffected == 1;
 		}
 
@@ -61,15 +62,14 @@ namespace Jaunty
 		/// Updates the specified entity.
 		/// </summary>
 		/// <typeparam name="T">The type representing the database table.</typeparam>
-		/// <param name="conditionalClause"></param>
+		/// <param name="condition"></param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns number of rows affected.</returns>
-		public static int Update<T>(this Condition conditionalClause, IDbTransaction transaction = null)
+		public static int Update<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			IDictionary<string, object> parameters = conditionalClause.GetParameters();
-			string sql = BuildUpdateSql<T>(conditionalClause);
-			OnUpdating?.Invoke(new SqlEventArgs { Sql = sql, Parameters = parameters });
-			return conditionalClause.Connection.Execute(sql, parameters, transaction);
+			IDictionary<string, object> parameters = condition?.GetParameters();
+			string sql = Update<T>(condition, parameters, ticket, true);
+			return condition.Connection.Execute(sql, parameters, transaction);
 		}
 
 		/// <summary>
@@ -79,12 +79,11 @@ namespace Jaunty
 		/// <param name="conditionalClause"></param>
 		/// <param name="transaction">The transaction (optional).</param>
 		/// <returns>Returns number of rows affected.</returns>
-		public static async Task<int> UpdateAsync<T>(this Condition conditionalClause, IDbTransaction transaction = null)
+		public static async Task<int> UpdateAsync<T>(this Condition condition, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			IDictionary<string, object> parameters = conditionalClause.GetParameters();
-			string sql = BuildUpdateSql<T>(conditionalClause);
-			OnUpdating?.Invoke(new SqlEventArgs { Sql = sql });
-			return await conditionalClause.Connection.ExecuteAsync(sql, parameters, transaction);
+			IDictionary<string, object> parameters = condition?.GetParameters();
+			string sql = Update<T>(condition, parameters, ticket, true);
+			return await condition.Connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -97,23 +96,26 @@ namespace Jaunty
 		/// <returns>A SetClause</returns>
 		public static SetClause Set<T>(this IDbConnection connection, string column, T value)
 		{
-			var setClause = new SetClause(connection);
-			setClause.Add(column, value);
-			return setClause;
+			var set = new SetClause(connection);
+			set.Add(column, value);
+			return set;
 		}
 
 		/// <summary>
 		/// Sets the column.
 		/// </summary>
 		/// <typeparam name="T">The type of value for the column.</typeparam>
-		/// <param name="setClause">The SetClause.</param>
+		/// <param name="set">The SetClause.</param>
 		/// <param name="column">The column.</param>
 		/// <param name="value">The value.</param>
 		/// <returns>A SetClause</returns>
-		public static SetClause Set<T>(this SetClause setClause, string column, T value)
+		public static SetClause Set<T>(this SetClause set, string column, T value)
 		{
-			setClause.Add(column, value);
-			return setClause;
+			if (set is null)
+				throw new ArgumentNullException(nameof(set));
+
+			set.Add(column, value);
+			return set;
 		}
 
 		/// <summary>
@@ -130,40 +132,67 @@ namespace Jaunty
 				throw new ArgumentNullException(nameof(expression));
 			}
 
-			var setClause = new SetClause(connection);
-			expression.Body.WalkThrough((name, _, value) => setClause.Add(name, value));
-			return setClause;
+			var set = new SetClause(connection);
+			expression.Body.WalkThrough((name, _, value) => set.Add(name, value));
+			return set;
 		}
 
 		/// <summary>
 		/// Sets the column.
 		/// </summary>
 		/// <typeparam name="T">The type of value for the column.</typeparam>
-		/// <param name="setClause"></param>
+		/// <param name="set"></param>
 		/// <param name="expression">The linq expression.</param>
 		/// <returns>A SetClause</returns>
-		public static SetClause Set<T>(this SetClause setClause, Expression<Func<T, bool>> expression)
+		public static SetClause Set<T>(this SetClause set, Expression<Func<T, bool>> expression)
 		{
 			if (expression is null)
 			{
 				throw new ArgumentNullException(nameof(expression));
 			}
 
-			expression.Body.WalkThrough((name, _, value) => setClause.Add(name, value));
-			return setClause;
+			expression.Body.WalkThrough((name, _, value) => set.Add(name, value));
+			return set;
 		}
 
-		private static string BuildUpdateSql<T>(Condition conditionClause = null)
+		private static string Update<T>(IDictionary<string, object> parameters, ITicket ticket = null, bool triggerEvent = false)
 		{
-			Type type = GetType(typeof(T));
-			var columnsList = conditionClause is null ? GetColumnsCache(type).Keys.ToList() : null;
-			var keyColumnsList = conditionClause is null ? GetKeysCache(type).Keys.ToList() : null;
-			columnsList?.Reduce(keyColumnsList);
-			string setClause = conditionClause is null ? columnsList.ToSetClause() : conditionClause.GetSetClause();
-			string whereClause = conditionClause is null ? keyColumnsList.ToWhereClause() : conditionClause.ToSql();
-			return SqlTemplates.UpdateWhere.Replace("{{table}}", GetTypeName(type), StringComparison.OrdinalIgnoreCase)
-										   .Replace("{{columns}}", setClause, StringComparison.OrdinalIgnoreCase)
-										   .Replace("{{where}}", whereClause, StringComparison.OrdinalIgnoreCase);
+			if (parameters is null)
+				throw new ArgumentNullException(nameof(parameters));
+
+			if (parameters.Count <= 0)
+				throw new ArgumentOutOfRangeException(nameof(parameters));
+
+			string sql = ticket is null
+						? BuildSql<T>(ClauseType.Update, parameters)
+						: _queriesCache.GetOrAdd(ticket.Id, q => BuildSql<T>(ClauseType.Update, parameters));
+
+			if (!triggerEvent)
+				return sql;
+
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnUpdating?.Invoke(eventArgs);
+			return sql;
+		}
+
+		private static string Update<T>(Clause clause, IDictionary<string, object> parameters, ITicket ticket = null, bool triggerEvent = false)
+		{
+			if (clause is null)
+				throw new ArgumentNullException(nameof(clause));
+
+			if (parameters is null)
+				throw new ArgumentNullException(nameof(parameters));
+
+			string sql = ticket is null
+						? ExtractSql<T>(ClauseType.Update, clause)
+						: _queriesCache.GetOrAdd(ticket.Id, q => ExtractSql<T>(ClauseType.Update, clause));
+
+			if (!triggerEvent)
+				return sql;
+
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnUpdating?.Invoke(eventArgs);
+			return sql;
 		}
 	}
 }
