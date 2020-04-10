@@ -8,6 +8,11 @@ namespace Jaunty
 {
 	public static class Extensions
 	{
+		public static IList<T> Clone<T>(this IList<T> listToClone) where T : ICloneable
+		{
+			return listToClone.Select(item => (T)item.Clone()).ToList();
+		}
+
 		public static StringBuilder AppendIf(this StringBuilder builder, bool condition, string text)
 		{
 			return condition ? builder?.Append(text) : builder;
@@ -146,7 +151,7 @@ namespace Jaunty
 
 		internal static void Reduce(this IList<string> list, IList<string> items)
 		{
-			for (var i = 0; i < items.Count; i++) list.Remove(items[i]);
+			foreach (string item in items) list.Remove(item);
 		}
 
 		internal static List<T> ForEach<T>(this IList<T> list, Func<T, T> callback)

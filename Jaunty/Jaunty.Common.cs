@@ -10,8 +10,26 @@ namespace Jaunty
 {
 	public static partial class Jaunty
 	{
+		private static string ExtractInsert<T>(Clause clause)
+		{
+			var type = GetType(typeof(T));
+			string sql = clause.ToSql();
+
+			string entity = GetTypeName(type);
+			var nonKeyColumns = GetNonKeyColumnsCache(type);
+			string columns = nonKeyColumns.ToClause();
+			string values = nonKeyColumns.ToClause(prefix: "@");
+			sql = sql.Replace("{{table}}", entity, StringComparison.OrdinalIgnoreCase)
+					 .Replace("{{columns}}", columns, StringComparison.OrdinalIgnoreCase)
+					 .Replace("{{values}}", values, StringComparison.OrdinalIgnoreCase);
+			return sql;
+		}
+
 		private static string ExtractSql<T>(ClauseType clauseType, Clause clause, string alias = null, string selectClause = null)
 		{
+			if (clauseType == ClauseType.Insert)
+				return ExtractInsert<T>(clause);
+
 			var type = GetType(typeof(T));
 			string sql = clause.ToSql();
 			string selectedAlias = alias;
@@ -41,9 +59,6 @@ namespace Jaunty
 					break;
 				case ClauseType.Update:
 					builder.Append("UPDATE ");
-					break;
-				case ClauseType.Insert:
-					builder.Append("INSERT INTO ");
 					break;
 			}
 
@@ -76,8 +91,6 @@ namespace Jaunty
 						break;
 					case ClauseType.Update:
 						builder.Append(entity + " " + sql);
-						break;
-					case ClauseType.Insert:
 						break;
 				}
 			}
@@ -190,7 +203,7 @@ namespace Jaunty
 			Type type = GetType(typeof(T));
 			var keys = GetKeysCache(type).Keys.ToList();
 			var columns = GetColumnsCache(type).Keys.ToList();
-			
+
 			if (clauseType == ClauseType.Update)
 			{
 				columns.Reduce(keys);

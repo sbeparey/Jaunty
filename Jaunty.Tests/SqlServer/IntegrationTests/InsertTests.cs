@@ -136,6 +136,38 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
+		public void insert_blah()
+		{
+			var ticket = new Ticket("lol");
+
+			string sql = null;
+			IDictionary<string, object> parameters = null;
+
+			Jaunty.OnInserting += (sender, args) =>
+			{
+				sql = args.Sql;
+				parameters = args.Parameters;
+			};
+
+			var product = new Product
+			{
+				ProductName = "Best Ground Coffee",
+				CategoryId = 1,
+				SupplierId = 2,
+				Discontinued = false,
+				UnitPrice = 20.00m,
+				QuantityPerUnit = "500 ml box",
+				ReorderLevel = 10,
+				UnitsInStock = 20,
+				UnitsOnOrder = 0
+			};
+
+			int productId = northwind.Connection.Values(product)
+												.Insert<Product>();
+
+		}
+
+		[Fact]
 		public void InsertUsingUnion()
 		{
 			var product = new Product

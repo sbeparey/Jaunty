@@ -369,6 +369,18 @@ namespace Jaunty
 			return columns;
 		}
 
+		private static IList<string> GetNonKeyColumnsCache(Type type)
+		{
+			var allColumns = GetColumnsCache(type);
+			var keys = GetKeysCache(type).Keys.ToList();
+			var nonKeyColumns = allColumns.Keys.ToList().Clone();
+
+			foreach (var key in keys)
+				nonKeyColumns.Remove(key);
+
+			return nonKeyColumns;
+		}
+
 		private static string GetColumnName(PropertyInfo property)
 		{
 			string columnName = GetColumnNameFromAttribute(property);
@@ -424,7 +436,7 @@ namespace Jaunty
 			string parameterName = null;
 
 			if (!string.IsNullOrEmpty(name))
-			{	
+			{
 				name = ColumnNameFormatter?.Invoke(name) ?? name;
 				parameterName = ParameterFormatter?.Invoke(name) ?? $"@{name}";
 			}
@@ -458,7 +470,7 @@ namespace Jaunty
 
 		private static IDictionary<string, object> ConvertToParameters<T>(T entity)
 		{
-			Type type = GetType(typeof(T));
+			Type type = GetType(entity.GetType());
 			IDictionary<string, PropertyInfo> columnNames = GetColumnsCache(type);
 			var parameters = new Dictionary<string, object>();
 

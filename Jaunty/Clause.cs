@@ -71,6 +71,40 @@ namespace Jaunty
 		internal abstract string ToSql();
 	}
 
+	//public class InsertInto : Clause
+	//{
+	//	public InsertInto(Clause clause, object entity)
+	//		: base(clause)
+	//	{
+	//		if (clause is null)
+	//			throw new ArgumentNullException(nameof(clause));
+	//	}
+
+	//	internal override string ToSql()
+	//	{
+	//		return "INSERT INTO {{table}}";
+	//	}
+	//}
+
+	public class Values : Clause
+	{
+		public Values(IDbConnection connection, object entity)
+			: base(connection)
+		{
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
+			
+			Entity = entity;
+		}
+
+		internal object Entity { get; }
+
+		internal override string ToSql()
+		{
+			return $"INSERT INTO {{{{table}}}} ({{{{columns}}}}) VALUES ({{{{values}}}})";
+		}
+	}
+
 	public class Distinct : Clause
 	{
 		public Distinct(IDbConnection connection)

@@ -160,6 +160,67 @@ namespace Jaunty
 			return Insert<T>(parameters, true, ticket);
 		}
 
+		public static Values Values<T>(this IDbConnection connection, T entity)
+		{
+			if (connection is null)
+				throw new ArgumentNullException(nameof(connection));
+
+			return new Values(connection, entity);
+		}
+
+		public static int Insert<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			return InsertInto<T>(values, transaction, ticket);
+		}
+
+		public static int InsertInto<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			var parameters = ConvertToParameters(values?.Entity);
+			string sql = Insert<T>(values, parameters, ticket, true);
+			return values.Connection.Execute(sql, parameters, transaction);
+		}
+
+		public static async Task<int> InsertAsync<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			return await InsertIntoAsync<T>(values, transaction, ticket).ConfigureAwait(false);
+		}
+
+		public static async Task<int> InsertIntoAsync<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			var parameters = ConvertToParameters(values?.Entity);
+			string sql = Insert<T>(values, parameters, ticket, true);
+			return await values.Connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
+		}
+
+		public static string InsertIntoAsString<T>(this Values values, ITicket ticket = null)
+		{
+			var parameters = ConvertToParameters(values?.Entity);
+			return Insert<T>(values, parameters, ticket, true);
+		}
+
+		private static string Insert<T>(Values values, IDictionary<string, object> parameters, ITicket ticket = null, bool triggerEvent = false)
+		{
+			if (values is null)
+				throw new ArgumentNullException(nameof(values));
+
+			if (parameters is null)
+				throw new ArgumentNullException(nameof(parameters));
+
+			if (parameters.Count <= 0)
+				throw new ArgumentOutOfRangeException(nameof(parameters));
+
+			var sql = ticket is null
+						? ExtractInsert<T>(values)
+						: _queriesCache.GetOrAdd(ticket.Id, q => ExtractInsert<T>(values));
+
+			if (!triggerEvent)
+				return sql;
+			
+			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
+			OnDeleting?.Invoke(ticket, eventArgs);
+			return sql;
+		}
+
 		private static string Insert<T>(IDictionary<string, object> parameters, bool returnScopeId, ITicket ticket = null, bool triggerEvent = false)
 		{
 			if (parameters is null)
