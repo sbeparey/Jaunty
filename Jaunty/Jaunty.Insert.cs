@@ -174,7 +174,7 @@ namespace Jaunty
 		public static int InsertInto<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = ConvertToParameters(values?.Entity);
-			string sql = Insert<T>(values, parameters, ticket, true);
+			string sql = Insert<T>(values, parameters, false, ticket, true);
 			return values.Connection.Execute(sql, parameters, transaction);
 		}
 
@@ -186,17 +186,47 @@ namespace Jaunty
 		public static async Task<int> InsertIntoAsync<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = ConvertToParameters(values?.Entity);
-			string sql = Insert<T>(values, parameters, ticket, true);
+			string sql = Insert<T>(values, parameters, false, ticket, true);
 			return await values.Connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
 		public static string InsertIntoAsString<T>(this Values values, ITicket ticket = null)
 		{
 			var parameters = ConvertToParameters(values?.Entity);
-			return Insert<T>(values, parameters, ticket, true);
+			return Insert<T>(values, parameters, false, ticket, true);
 		}
 
-		private static string Insert<T>(Values values, IDictionary<string, object> parameters, ITicket ticket = null, bool triggerEvent = false)
+		public static TKey Insert<T, TKey>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			return InsertInto<T, TKey>(values, transaction, ticket);
+		}
+
+		public static TKey InsertInto<T, TKey>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			var parameters = ConvertToParameters(values?.Entity);
+			string sql = Insert<T>(values, parameters, true, ticket, true);
+			return values.Connection.QuerySingle<TKey>(sql, parameters, transaction);
+		}
+
+		public static async Task<TKey> InsertAsync<T, TKey>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			return await InsertIntoAsync<T, TKey>(values, transaction, ticket).ConfigureAwait(false);
+		}
+
+		public static async Task<TKey> InsertIntoAsync<T, TKey>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		{
+			var parameters = ConvertToParameters(values?.Entity);
+			string sql = Insert<T>(values, parameters, true, ticket, true);
+			return await values.Connection.QuerySingleAsync<TKey>(sql, parameters, transaction).ConfigureAwait(false);
+		}
+
+		public static string InsertIntoAsString<T, TKey>(this Values values, ITicket ticket = null)
+		{
+			var parameters = ConvertToParameters(values?.Entity);
+			return Insert<T>(values, parameters, true, ticket, true);
+		}
+
+		private static string Insert<T>(Values values, IDictionary<string, object> parameters, bool returnScopeId = false, ITicket ticket = null, bool triggerEvent = false)
 		{
 			if (values is null)
 				throw new ArgumentNullException(nameof(values));
@@ -208,14 +238,14 @@ namespace Jaunty
 				throw new ArgumentOutOfRangeException(nameof(parameters));
 
 			var sql = ticket is null
-						? ExtractInsert<T>(values)
-						: _queriesCache.GetOrAdd(ticket.Id, q => ExtractInsert<T>(values));
+						? ExtractInsert<T>(values, returnScopeId)
+						: _queriesCache.GetOrAdd(ticket.Id, q => ExtractInsert<T>(values, returnScopeId));
 
 			if (!triggerEvent)
 				return sql;
 			
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnDeleting?.Invoke(ticket, eventArgs);
+			OnInserting?.Invoke(ticket, eventArgs);
 			return sql;
 		}
 
@@ -239,7 +269,7 @@ namespace Jaunty
 			return sql;
 		}
 
-		private static string ExtractInsert<T>(Clause clause, bool returnId = false)
+		private static string ExtractInsert<T>(Clause clause, bool returnScopeId = false)
 		{
 			var type = GetType(typeof(T));
 			string entity = GetTypeName(type);
@@ -250,7 +280,7 @@ namespace Jaunty
 			string sql = GenerateInsert(clause.ToSql(), entity, columns, values);
 			sql += ";";
 
-			if (returnId)
+			if (returnScopeId)
 			{
 				var keyColumns = new List<string>(GetKeysCache(type).Keys);
 				string selectId = ExtractReturnId(keyColumns);
@@ -260,7 +290,7 @@ namespace Jaunty
 			return sql;
 		}
 
-		private static string ExtractInsert<T>(IDictionary<string, object> parameters, bool returnId = false)
+		private static string ExtractInsert<T>(IDictionary<string, object> parameters, bool returnScopeId = false)
 		{
 			var type = GetType(typeof(T));
 			string entity = GetTypeName(type);
@@ -279,7 +309,7 @@ namespace Jaunty
 			string sql = GenerateInsert(SqlTemplates.Insert, entity, columns, values);
 			sql += ";";
 
-			if (returnId)
+			if (returnScopeId)
 			{
 				string selectId = ExtractReturnId(keyColumns);
 				sql += " " + selectId;

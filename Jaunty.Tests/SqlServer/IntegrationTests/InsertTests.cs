@@ -162,9 +162,51 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				UnitsOnOrder = 0
 			};
 
-			int productId = northwind.Connection.Values(product)
+			int rowsAffected = northwind.Connection.Values(product)
 												.Insert<Product>();
 
+			Assert.Equal("INSERT INTO Products (ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, UnitsOnOrder, " +
+				"ReorderLevel, Discontinued) VALUES (@ProductName, @SupplierId, @CategoryId, @QuantityPerUnit, @UnitPrice, @UnitsInStock, " +
+				"@UnitsOnOrder, @ReorderLevel, @Discontinued);", sql);
+			Assert.NotEmpty(parameters);
+			Assert.Equal(1, rowsAffected);
+		}
+
+		[Fact]
+		public void insert_blah2()
+		{
+			var ticket = new Ticket("lol2");
+
+			string sql = null;
+			IDictionary<string, object> parameters = null;
+
+			Jaunty.OnInserting += (sender, args) =>
+			{
+				sql = args.Sql;
+				parameters = args.Parameters;
+			};
+
+			var product = new Product
+			{
+				ProductName = "Best Ground Coffee",
+				CategoryId = 1,
+				SupplierId = 2,
+				Discontinued = false,
+				UnitPrice = 20.00m,
+				QuantityPerUnit = "500 ml box",
+				ReorderLevel = 10,
+				UnitsInStock = 20,
+				UnitsOnOrder = 0
+			};
+
+			int productId = northwind.Connection.Values(product)
+												.Insert<Product, int>();
+
+			Assert.Equal("INSERT INTO Products (ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, UnitsOnOrder, " +
+				"ReorderLevel, Discontinued) VALUES (@ProductName, @SupplierId, @CategoryId, @QuantityPerUnit, @UnitPrice, @UnitsInStock, " +
+				"@UnitsOnOrder, @ReorderLevel, @Discontinued); SELECT CAST(SCOPE_IDENTITY() AS BIGINT);", sql);
+			Assert.NotEmpty(parameters);
+			Assert.Equal(80, productId);
 		}
 
 		[Fact]
