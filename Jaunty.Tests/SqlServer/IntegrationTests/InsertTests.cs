@@ -162,14 +162,14 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				UnitsOnOrder = 0
 			};
 
-			int rowsAffected = northwind.Connection.Values(product)
-												.Insert<Product>();
+			bool success = northwind.Connection.Values(product)
+											   .Insert<Product>();
 
 			Assert.Equal("INSERT INTO Products (ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, UnitsOnOrder, " +
 				"ReorderLevel, Discontinued) VALUES (@ProductName, @SupplierId, @CategoryId, @QuantityPerUnit, @UnitPrice, @UnitsInStock, " +
 				"@UnitsOnOrder, @ReorderLevel, @Discontinued);", sql);
 			Assert.NotEmpty(parameters);
-			Assert.Equal(1, rowsAffected);
+			Assert.True(success);
 		}
 
 		[Fact]

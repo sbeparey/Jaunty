@@ -166,28 +166,30 @@ namespace Jaunty
 			return new Values(connection, entity);
 		}
 
-		public static int Insert<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		public static bool Insert<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			return InsertInto<T>(values, transaction, ticket);
 		}
 
-		public static int InsertInto<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		public static bool InsertInto<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = ConvertToParameters(values?.Entity);
 			string sql = Insert<T>(values, parameters, false, ticket, true);
-			return values.Connection.Execute(sql, parameters, transaction);
+			int rowsAffected = values.Connection.Execute(sql, parameters, transaction);
+			return rowsAffected == 1;
 		}
 
-		public static async Task<int> InsertAsync<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		public static async Task<bool> InsertAsync<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			return await InsertIntoAsync<T>(values, transaction, ticket).ConfigureAwait(false);
 		}
 
-		public static async Task<int> InsertIntoAsync<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
+		public static async Task<bool> InsertIntoAsync<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
 		{
 			var parameters = ConvertToParameters(values?.Entity);
 			string sql = Insert<T>(values, parameters, false, ticket, true);
-			return await values.Connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
+			int rowsAffected = await values.Connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
+			return rowsAffected == 1;
 		}
 
 		public static string InsertIntoAsString<T>(this Values values, ITicket ticket = null)
