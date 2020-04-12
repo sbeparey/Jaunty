@@ -173,8 +173,11 @@ namespace Jaunty
 
 		public static bool InsertInto<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			var parameters = ConvertToParameters(values?.Entity);
-			string sql = Insert<T>(values, parameters, false, ticket, true);
+			if (values is null)
+				throw new ArgumentNullException(nameof(values));
+
+			var parameters = ConvertToParameters(values.Entity);
+			string sql = Insert<T>(parameters, false, ticket, true);
 			int rowsAffected = values.Connection.Execute(sql, parameters, transaction);
 			return rowsAffected == 1;
 		}
@@ -186,16 +189,22 @@ namespace Jaunty
 
 		public static async Task<bool> InsertIntoAsync<T>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			var parameters = ConvertToParameters(values?.Entity);
-			string sql = Insert<T>(values, parameters, false, ticket, true);
+			if (values is null)
+				throw new ArgumentNullException(nameof(values));
+
+			var parameters = ConvertToParameters(values.Entity);
+			string sql = Insert<T>(parameters, false, ticket, true);
 			int rowsAffected = await values.Connection.ExecuteAsync(sql, parameters, transaction).ConfigureAwait(false);
 			return rowsAffected == 1;
 		}
 
 		public static string InsertIntoAsString<T>(this Values values, ITicket ticket = null)
 		{
-			var parameters = ConvertToParameters(values?.Entity);
-			return Insert<T>(values, parameters, false, ticket, true);
+			if (values is null)
+				throw new ArgumentNullException(nameof(values));
+
+			var parameters = ConvertToParameters(values.Entity);
+			return Insert<T>(parameters, false, ticket, true);
 		}
 
 		public static TKey Insert<T, TKey>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
@@ -205,8 +214,11 @@ namespace Jaunty
 
 		public static TKey InsertInto<T, TKey>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			var parameters = ConvertToParameters(values?.Entity);
-			string sql = Insert<T>(values, parameters, true, ticket, true);
+			if (values is null)
+				throw new ArgumentNullException(nameof(values));
+
+			var parameters = ConvertToParameters(values.Entity);
+			string sql = Insert<T>(parameters, true, ticket, true);
 			return values.Connection.QuerySingle<TKey>(sql, parameters, transaction);
 		}
 
@@ -217,22 +229,25 @@ namespace Jaunty
 
 		public static async Task<TKey> InsertIntoAsync<T, TKey>(this Values values, IDbTransaction transaction = null, ITicket ticket = null)
 		{
-			var parameters = ConvertToParameters(values?.Entity);
-			string sql = Insert<T>(values, parameters, true, ticket, true);
+			if (values is null)
+				throw new ArgumentNullException(nameof(values));
+
+			var parameters = ConvertToParameters(values.Entity);
+			string sql = Insert<T>(parameters, true, ticket, true);
 			return await values.Connection.QuerySingleAsync<TKey>(sql, parameters, transaction).ConfigureAwait(false);
 		}
 
 		public static string InsertIntoAsString<T, TKey>(this Values values, ITicket ticket = null)
 		{
-			var parameters = ConvertToParameters(values?.Entity);
-			return Insert<T>(values, parameters, true, ticket, true);
-		}
-
-		private static string Insert<T>(Values values, IDictionary<string, object> parameters, bool returnScopeId = false, ITicket ticket = null, bool triggerEvent = false)
-		{
 			if (values is null)
 				throw new ArgumentNullException(nameof(values));
 
+			var parameters = ConvertToParameters(values.Entity);
+			return Insert<T>(parameters, true, ticket, true);
+		}
+
+		private static string Insert<T>(IDictionary<string, object> parameters, bool returnScopeId = false, ITicket ticket = null, bool triggerEvent = false)
+		{
 			if (parameters is null)
 				throw new ArgumentNullException(nameof(parameters));
 
@@ -240,55 +255,14 @@ namespace Jaunty
 				throw new ArgumentOutOfRangeException(nameof(parameters));
 
 			var sql = ticket is null
-						? ExtractInsert<T>(values, returnScopeId)
-						: _queriesCache.GetOrAdd(ticket.Id, q => ExtractInsert<T>(values, returnScopeId));
+						? ExtractInsert<T>(parameters, returnScopeId)
+						: _queriesCache.GetOrAdd(ticket.Id, q => ExtractInsert<T>(parameters, returnScopeId));
 
 			if (!triggerEvent)
 				return sql;
 			
 			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
 			OnInserting?.Invoke(ticket, eventArgs);
-			return sql;
-		}
-
-		private static string Insert<T>(IDictionary<string, object> parameters, bool returnScopeId, ITicket ticket = null, bool triggerEvent = false)
-		{
-			if (parameters is null)
-				throw new ArgumentNullException(nameof(parameters));
-
-			if (parameters.Count <= 0)
-				throw new ArgumentOutOfRangeException(nameof(parameters));
-
-			string sql = ticket is null
-						? ExtractInsert<T>(parameters, returnScopeId)
-						: _queriesCache.GetOrAdd(ticket.Id, q => ExtractInsert<T>(parameters, returnScopeId));
-
-			if (!triggerEvent)
-				return sql;
-
-			var eventArgs = new SqlEventArgs { Sql = sql, Parameters = parameters };
-			OnInserting?.Invoke(ticket, eventArgs);
-			return sql;
-		}
-
-		private static string ExtractInsert<T>(Clause clause, bool returnScopeId = false)
-		{
-			var type = GetType(typeof(T));
-			string entity = GetTypeName(type);
-			var nonKeyColumns = GetNonKeyColumnsCache(type);
-			string columns = nonKeyColumns.ToClause();
-			string values = nonKeyColumns.ToClause(prefix: "@");
-
-			string sql = GenerateInsert(clause.ToSql(), entity, columns, values);
-			sql += ";";
-
-			if (returnScopeId)
-			{
-				var keyColumns = new List<string>(GetKeysCache(type).Keys);
-				string selectId = ExtractReturnId(keyColumns);
-				sql += " " + selectId;
-			}
-
 			return sql;
 		}
 
@@ -302,8 +276,7 @@ namespace Jaunty
 
 			if (keyColumns.Count == 1 && !IsManual(keys.ElementAt(0).Value))
 			{
-				foreach (var key in keyColumns)
-					parameterColumns.Remove(key);
+				parameterColumns.Remove(keyColumns[0]);
 			}
 
 			string columns = parameterColumns.ToClause();

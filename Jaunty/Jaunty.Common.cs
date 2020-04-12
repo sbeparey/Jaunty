@@ -13,7 +13,7 @@ namespace Jaunty
 		private static string ExtractSql<T>(ClauseType clauseType, Clause clause, string alias = null, string selectClause = null)
 		{
 			if (clauseType == ClauseType.Insert)
-				return ExtractInsert<T>(clause);
+				throw new InvalidOperationException("Please call ExtractInsert<T> instead");
 
 			var type = GetType(typeof(T));
 			string sql = clause.ToSql();

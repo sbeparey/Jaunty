@@ -71,21 +71,6 @@ namespace Jaunty
 		internal abstract string ToSql();
 	}
 
-	//public class InsertInto : Clause
-	//{
-	//	public InsertInto(Clause clause, object entity)
-	//		: base(clause)
-	//	{
-	//		if (clause is null)
-	//			throw new ArgumentNullException(nameof(clause));
-	//	}
-
-	//	internal override string ToSql()
-	//	{
-	//		return "INSERT INTO {{table}}";
-	//	}
-	//}
-
 	public class Values : Clause
 	{
 		public Values(IDbConnection connection, object entity)
@@ -101,7 +86,7 @@ namespace Jaunty
 
 		internal override string ToSql()
 		{
-			return $"INSERT INTO {{{{table}}}} ({{{{columns}}}}) VALUES ({{{{values}}}})";
+			return SqlTemplates.Insert;
 		}
 	}
 
