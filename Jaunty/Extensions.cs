@@ -214,6 +214,11 @@ namespace Jaunty
 			return ToClause(new List<string>(columns.Values));
 		}
 
+		internal static string ToClause(this IDictionary<string, object> parameters)
+		{
+			return ToClause(new List<string>(parameters.Keys));
+		}
+
 		//internal static string ToClause(this IList<string> columnsList)
 		//{
 		//	return columnsList.ToClause(", ");

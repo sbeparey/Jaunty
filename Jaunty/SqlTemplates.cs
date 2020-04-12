@@ -9,7 +9,7 @@
 		internal const string SelectWhere = "SELECT {{columns}} FROM {{table}} WHERE {{where}};";
 		//internal const string Select = "SELECT {{columns}} FROM {{table}} GROUP BY {{groupby}} HAVING {{having}} ORDER BY {{orderby}}";
 
-		internal const string Insert = "INSERT INTO {{table}} ({{columns}}) VALUES ({{parameters}})";
+		internal const string Insert = "INSERT INTO {{table}} ({{columns}}) VALUES ({{values}})";
 		internal const string InsertByUnion = "INSERT INTO {{table}} ({{columns}}) \n" +
 											   "{{select}}";
 

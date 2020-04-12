@@ -342,6 +342,19 @@ namespace Jaunty
 			return false;
 		}
 
+		private static bool IsManual(this PropertyInfo property)
+		{
+			var attributes = property.GetCustomAttributes(false);
+
+			foreach (var attribute in attributes)
+			{
+				if (attribute is KeyAttribute key)
+					return key.Manual;
+			}
+
+			return false;
+		}
+
 		private static bool HasIdInColumnName(Type type, string columnName)
 		{
 			return columnName.Equals("id", StringComparison.CurrentCultureIgnoreCase)
