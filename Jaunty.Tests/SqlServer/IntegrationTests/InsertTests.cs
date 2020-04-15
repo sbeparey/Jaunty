@@ -38,7 +38,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void Insert()
+		public void insert_using_Insert_should_return_true()
 		{
 			var ticket = new Ticket("insert a product");
 			var product = new Product
@@ -70,7 +70,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void InsertAndReturnThePrimaryKey()
+		public void insert_using_Insert_should_return_the_primary_key()
 		{
 			var ticket = new Ticket("insert a product return the primary key");
 			var product = new Product
@@ -99,11 +99,11 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 						 "VALUES (@ProductName, @SupplierId, @CategoryId, @QuantityPerUnit, @UnitPrice, @UnitsInStock, @UnitsOnOrder, " +
 													   "@ReorderLevel, @Discontinued); " +
 						 "SELECT CAST(SCOPE_IDENTITY() AS BIGINT);", sql);
-			Assert.True(productId > 1);
+			Assert.True(productId > 77);
 		}
 
 		[Fact]
-		public void InsertUsingStringKey()
+		public void insert_where_key_is_string_using_Insert_should_return_true()
 		{
 			var ticket = new Ticket("insert customer demographics");
 			var customerDemographic = new CustomerDemographic
@@ -136,9 +136,9 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void insert_blah()
+		public void insert_using_fluent_Insert_should_return_true()
 		{
-			var ticket = new Ticket("lol");
+			var ticket = new Ticket("insert a product");
 
 			string sql = null;
 			IDictionary<string, object> parameters = null;
@@ -173,9 +173,9 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void insert_blah2()
+		public void insert_using_fluent_Insert_should_return_the_primary_key()
 		{
-			var ticket = new Ticket("lol2");
+			var ticket = new Ticket("insert a product return the primary key");
 
 			string sql = null;
 			IDictionary<string, object> parameters = null;
@@ -206,11 +206,11 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				"ReorderLevel, Discontinued) VALUES (@ProductName, @SupplierId, @CategoryId, @QuantityPerUnit, @UnitPrice, @UnitsInStock, " +
 				"@UnitsOnOrder, @ReorderLevel, @Discontinued); SELECT CAST(SCOPE_IDENTITY() AS BIGINT);", sql);
 			Assert.NotEmpty(parameters);
-			Assert.Equal(80, productId);
+			Assert.True(productId > 77);
 		}
 
 		[Fact]
-		public void InsertUsingUnion()
+		public void insert_using_union()
 		{
 			var product = new Product
 			{

@@ -39,7 +39,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void UpdateEntity()
+		public void update_using_Update_should_return_true()
 		{
 			Product product = northwind.Connection.Get<Product, int>(1);
 			product.ProductName = "Coffee";
@@ -50,21 +50,21 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			bool success = northwind.Connection.Update(product);
 
 			Assert.Equal("UPDATE Products " +
-								 "SET ProductName = @ProductName, " +
-									 "SupplierId = @SupplierId, " +
-									 "CategoryId = @CategoryId, " +
-									 "QuantityPerUnit = @QuantityPerUnit, " +
-									 "UnitPrice = @UnitPrice, " +
-									 "UnitsInStock = @UnitsInStock, " +
-									 "UnitsOnOrder = @UnitsOnOrder, " +
-									 "ReorderLevel = @ReorderLevel, " +
-									 "Discontinued = @Discontinued " +
-								 "WHERE ProductId = @ProductId;", sql);
+						"SET ProductName = @ProductName, " +
+							"SupplierId = @SupplierId, " +
+							"CategoryId = @CategoryId, " +
+							"QuantityPerUnit = @QuantityPerUnit, " +
+							"UnitPrice = @UnitPrice, " +
+							"UnitsInStock = @UnitsInStock, " +
+							"UnitsOnOrder = @UnitsOnOrder, " +
+							"ReorderLevel = @ReorderLevel, " +
+							"Discontinued = @Discontinued " +
+						"WHERE ProductId = @ProductId;", sql);
 			Assert.True(success);
 		}
 
 		[Fact]
-		public void UpdateEntityBySetAndWhere()
+		public void update_using_fluent_Update_should_return_number_of_rows_affected_in_int()
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
@@ -75,9 +75,9 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			};
 
 			int rowsAffected = northwind.Connection
-								.Set(Products.ProductName, "Chai latte")
-								.Where(Products.ProductId, 1)
-								.Update<Product>();
+										.Set(Products.ProductName, "Chai latte")
+										.Where(Products.ProductId, 1)
+										.Update<Product>();
 
 			Assert.Equal("UPDATE Products SET ProductName = @ProductName WHERE ProductId = @ProductId;", sql);
 			Assert.NotEmpty(parameters);
@@ -89,7 +89,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void UpdateEntityColumnToNull()
+		public void update_a_non_nullable_column_to_null_using_fluent_Update_should_throw_SqlException()
 		{
 			Assert.Throws<SqlException>(() => northwind.Connection
 														.Set("ProductName", (string)null)
@@ -98,7 +98,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void UpdateEntityByDoubleSetAndWhere()
+		public void update_multiple_columns_with_multiple_where_using_fluent_Update_should_return_number_of_rows_affected_in_int()
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
@@ -109,17 +109,17 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			};
 
 			int rowsAffected = northwind.Connection
-								.Set("ProductName", "Chang 2")
-								.Set("UnitPrice", 24m)
-								.Where("ProductName", "Chang")
-								.AndWhere("CategoryId", 2)
-								.Update<Product>();
+										.Set("ProductName", "Chang 2")
+										.Set("UnitPrice", 24m)
+										.Where("ProductName", "Chang")
+										.AndWhere("CategoryId", 2)
+										.Update<Product>();
 
 			Assert.Equal("UPDATE Products " +
-								 "SET ProductName = @ProductName, " +
-									 "UnitPrice = @UnitPrice " +
-								 "WHERE ProductName = @ProductName$ AND " +
-									 "CategoryId = @CategoryId;", sql);
+						 "SET ProductName = @ProductName, " +
+							"UnitPrice = @UnitPrice " +
+						 "WHERE ProductName = @ProductName$ AND " +
+							"CategoryId = @CategoryId;", sql);
 
 			Assert.NotEmpty(parameters);
 			Assert.Equal("ProductName", parameters.ElementAt(0).Key);
@@ -134,7 +134,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void UpdateEntityUsingFluentEqualTo()
+		public void update_column_by_EqualTo_using_fluent_Update_should_return_number_of_rows_affected_in_int()
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
@@ -145,9 +145,9 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			};
 
 			int rowsAffected = northwind.Connection
-								.Set("UnitPrice", 24.01m)
-								.Where("UnitPrice").EqualTo(24m)
-								.Update<Product>();
+										.Set("UnitPrice", 24.01m)
+										.Where("UnitPrice").EqualTo(24m)
+										.Update<Product>();
 
 			Assert.Equal("UPDATE Products SET UnitPrice = @UnitPrice WHERE UnitPrice = @UnitPrice$;", sql);
 			Assert.NotEmpty(parameters);
@@ -159,7 +159,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void UpdateEntityUsingFluentEqualToAndGreaterThan()
+		public void update_mutliple_columns_by_EqualTo_and_GreaterThan_using_fluent_Update_should_return_number_of_rows_affected_in_int()
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
@@ -170,27 +170,27 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			};
 
 			int rowsAffected = northwind.Connection
-								.Set("UnitPrice", 24.01m)
-								.Where("UnitPrice").EqualTo(24m)
-								.AndWhere("UnitsInStock").GreaterThan(12)
-								.Update<Product>();
+										.Set("UnitPrice", 11.50m)
+										.Where("UnitPrice").EqualTo(12m)
+										.AndWhere("UnitsInStock").GreaterThan(12)
+										.Update<Product>();
 
 			Assert.Equal("UPDATE Products " +
-								 "SET UnitPrice = @UnitPrice " +
-								 "WHERE UnitPrice = @UnitPrice$ AND " +
-								       "UnitsInStock > @UnitsInStock;", sql);
+						"SET UnitPrice = @UnitPrice " +
+						"WHERE UnitPrice = @UnitPrice$ AND " +
+						"UnitsInStock > @UnitsInStock;", sql);
 			Assert.NotEmpty(parameters);
 			Assert.Equal("UnitPrice", parameters.ElementAt(0).Key);
-			Assert.Equal(24.01m, parameters.ElementAt(0).Value);
+			Assert.Equal(11.50m, parameters.ElementAt(0).Value);
 			Assert.Equal("UnitPrice$", parameters.ElementAt(1).Key);
-			Assert.Equal(24m, parameters.ElementAt(1).Value);
+			Assert.Equal(12m, parameters.ElementAt(1).Value);
 			Assert.Equal("UnitsInStock", parameters.ElementAt(2).Key);
 			Assert.Equal(12, parameters.ElementAt(2).Value);
-			Assert.True(rowsAffected == 0);
+			Assert.True(rowsAffected == 1);
 		}
 
 		[Fact]
-		public void UpdateEntityUsingAndAndOr()
+		public void update_mutliple_columns_with_and_and_or_clause_using_fluent_Update_should_return_number_of_rows_affected_in_int()
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
@@ -201,17 +201,18 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			};
 
 			int rowsAffected = northwind.Connection
-				.Set("UnitPrice", 24.01m)
-				.Where("UnitPrice").EqualTo(12m)
-				.AndWhere("UnitsInStock").EqualTo(2)
-				.OrWhere("UnitsOnOrder").EqualTo(3)
-				.Update<Product>();
+										.Set("UnitPrice", 24.01m)
+										.Where("UnitPrice").EqualTo(12m)
+										.AndWhere("UnitsInStock").EqualTo(2)
+										.OrWhere("UnitsOnOrder").EqualTo(3)
+										.Update<Product>();
 
 			Assert.Equal("UPDATE Products " +
-			             "SET UnitPrice = @UnitPrice " +
-			             "WHERE UnitPrice = @UnitPrice$ AND " +
-			             "UnitsInStock = @UnitsInStock OR " +
-			             "UnitsOnOrder = @UnitsOnOrder;", sql);
+						"SET UnitPrice = @UnitPrice " +
+						"WHERE UnitPrice = @UnitPrice$ AND " +
+						"UnitsInStock = @UnitsInStock OR " +
+						"UnitsOnOrder = @UnitsOnOrder;", sql);
+
 			Assert.NotEmpty(parameters);
 			Assert.Equal("UnitPrice", parameters.ElementAt(0).Key);
 			Assert.Equal(24.01m, parameters.ElementAt(0).Value);
@@ -225,7 +226,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void UpdateEntityBySetAndWhereLambda()
+		public void update_with_lambda_using_fluent_Update_should_return_number_of_rows_affected_in_int()
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
@@ -236,9 +237,10 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			};
 
 			int rowsAffected = northwind.Connection
-								.Set<Product>(x => x.ProductName == "Chai")
-								.Where<Product>(x => x.ProductId == 1)
-								.Update<Product>();
+										.Set<Product>(x => x.ProductName == "Chai")
+										.Where<Product>(x => x.ProductId == 1)
+										.Update<Product>();
+
 			Assert.Equal("UPDATE Products SET ProductName = @ProductName WHERE ProductId = @ProductId;", sql);
 			Assert.NotEmpty(parameters);
 			Assert.Equal("ProductName", parameters.ElementAt(0).Key);
@@ -249,7 +251,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void UpdateEntityBySetAndMultipleWhereLambda()
+		public void update_with_multiple_lambda_using_fluent_Update_should_return_number_of_rows_affected_in_int()
 		{
 			string sql = null;
 			IDictionary<string, object> parameters = null;
@@ -260,13 +262,14 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			};
 
 			int rowsAffected = northwind.Connection
-								.Set<Product>(x => x.ProductName == "Chai")
-								.Where<Product>(x => x.ProductId != 10 && x.CategoryId == 20)
-								.Update<Product>();
+										.Set<Product>(x => x.ProductName == "Chai")
+										.Where<Product>(x => x.ProductId != 10 && x.CategoryId == 20)
+										.Update<Product>();
+
 			Assert.Equal("UPDATE Products " +
-								 "SET ProductName = @ProductName " +
-								 "WHERE ProductId <> @ProductId AND " +
-									   "CategoryId = @CategoryId;", sql);
+						"SET ProductName = @ProductName " +
+						"WHERE ProductId <> @ProductId AND " +
+						"CategoryId = @CategoryId;", sql);
 			Assert.NotEmpty(parameters);
 			Assert.Equal("ProductName", parameters.ElementAt(0).Key);
 			Assert.Equal("Chai", parameters.ElementAt(0).Value);
