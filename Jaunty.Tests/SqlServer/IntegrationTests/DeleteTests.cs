@@ -59,28 +59,28 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			Assert.Equal(77, parameters.ElementAt(0).Value);
 		}
 
-		//[Fact]
-		//public void delete_a_single_item_using_Delete_returns_true()
-		//{
-		//	var ticket = new Ticket("delete a product by id");
-		//	string sql = null;
-		//	IDictionary<string, object> parameters = null;
+		[Fact]
+		public void delete_a_single_item_using_Delete_returns_true()
+		{
+			var ticket = new Ticket("delete a product by id");
+			string sql = null;
+			IDictionary<string, object> parameters = null;
 
-		//	Jaunty.OnDeleting += (sender, args) =>
-		//	{
-		//		sql = args.Sql;
-		//		parameters = args.Parameters;
-		//	};
+			Jaunty.OnDeleting += (sender, args) =>
+			{
+				sql = args.Sql;
+				parameters = args.Parameters;
+			};
 
-		//	bool success = northwind.Connection.Delete<Product, int>(1, ticket: ticket);
+			bool success = northwind.Connection.Delete<Product, int>(1, ticket: ticket);
 
-		//	Assert.Equal("DELETE FROM Products WHERE ProductId = @ProductId;", sql);
-		//	Assert.NotEmpty(parameters);
-		//	Assert.Equal("ProductId", parameters.ElementAt(0).Key);
-		//	Assert.Equal(1, parameters.ElementAt(0).Value);
+			Assert.Equal("DELETE FROM Products WHERE ProductId = @ProductId;", sql);
+			Assert.NotEmpty(parameters);
+			Assert.Equal("ProductId", parameters.ElementAt(0).Key);
+			Assert.Equal(1, parameters.ElementAt(0).Value);
 
-		//	Assert.True(success);
-		//}
+			Assert.True(success);
+		}
 
 		[Fact]
 		public void delete_a_single_item_using_Delete_string_as_key_returns_true()
@@ -101,7 +101,6 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			Assert.NotEmpty(parameters);
 			Assert.Equal("CustomerTypeId", parameters.ElementAt(0).Key);
 			Assert.Equal("Potential", parameters.ElementAt(0).Value);
-
 			//Assert.True(success);
 		}
 
@@ -126,7 +125,6 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			Assert.Equal("ALFKI", parameters.ElementAt(0).Value);
 			Assert.Equal("CustomerTypeId", parameters.ElementAt(1).Key);
 			Assert.Equal("Loyal", parameters.ElementAt(1).Value);
-
 			//Assert.True(success);
 		}
 

@@ -193,35 +193,6 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			Assert.True(products[0].ProductId > 0);
 		}
 
-		//[Fact]
-		//public async Task SelectWhereWithLimitByFluent_Products_ReturnsAllProducts()
-		//{
-		//	var ticket = new Ticket("");
-		//	string sql = null;
-
-		//	Jaunty.OnSelecting += (sender, args) =>
-		//	{
-		//		if (sender == ticket)
-		//		{
-		//			sql = args.Sql;
-		//		}
-		//	};
-
-		//	var products = (await northwind.Connection.From<Product>()
-		//									   .Where("CategoryId", 2)
-		//									   .Limit(5)
-		//									   .Select<Product>(ticket: ticket).ToList();
-
-		//	Assert.Equal("SELECT ProductId, ProductName, SupplierId, CategoryId, QuantityPerUnit, UnitPrice, UnitsInStock, " +
-		//					"UnitsOnOrder, ReorderLevel, Discontinued " +
-		//				 "FROM Products " +
-		//				 "WHERE CategoryId = @CategoryId " +
-		//				 "LIMIT 5;", sql);
-
-		//	Assert.NotEmpty(products);
-		//	Assert.True(products[0].ProductId > 0);
-		//}
-
 		[Fact]
 		public async Task get_top_10_using_fluent_Select_returns_a_collection_of_first_10_products()
 		{
