@@ -6,20 +6,20 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
-
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Jaunty.Tests.SqlServer.IntegrationTests
 {
 	[Collection("sql server tests")]
-	public class DeleteTests : IClassFixture<Northwind>
+	public class DeleteAsyncTests : IClassFixture<Northwind>
 	{
 		private readonly ITestOutputHelper output;
 		private readonly Northwind northwind;
 		IPluralize pluralize = new Pluralizer();
 
-		public DeleteTests(ITestOutputHelper output, Northwind northwind)
+		public DeleteAsyncTests(ITestOutputHelper output, Northwind northwind)
 		{
 			this.output = output;
 			Jaunty.SqlDialect = Jaunty.Dialect.SqlServer;
@@ -39,7 +39,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void delete_a_single_item_using_Delete_throws_sql_exception()
+		public async Task delete_a_single_item_using_Delete_throws_sql_exception()
 		{
 			var ticket = new Ticket("delete a product by id");
 			string sql = null;
@@ -51,7 +51,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				parameters = args.Parameters;
 			};
 
-			Assert.Throws<SqlException>(() => northwind.Connection.Delete<Product, int>(77, ticket: ticket));
+			await Assert.ThrowsAsync<SqlException>(() => northwind.Connection.DeleteAsync<Product, int>(77, ticket: ticket));
 
 			Assert.Equal("DELETE FROM Products WHERE ProductId = @ProductId;", sql);
 			Assert.NotEmpty(parameters);
@@ -60,7 +60,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void delete_a_single_item_using_Delete_string_as_key_returns_true()
+		public async Task delete_a_single_item_using_Delete_string_as_key_returns_true()
 		{
 			var ticket = new Ticket("delete a customer demographic by customer type id");
 			string sql = null;
@@ -72,7 +72,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				parameters = args.Parameters;
 			};
 
-			bool success = northwind.Connection.Delete<CustomerDemographic, string>("Potential", ticket: ticket);
+			bool success = await northwind.Connection.DeleteAsync<CustomerDemographic, string>("Potential", ticket: ticket);
 
 			Assert.Equal("DELETE FROM CustomerDemographics WHERE CustomerTypeId = @CustomerTypeId;", sql);
 			Assert.NotEmpty(parameters);
@@ -82,7 +82,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void delete_an_item_by_multiple_foreign_keys_using_Delete_returns_true()
+		public async Task delete_an_item_by_multiple_foreign_keys_using_Delete_returns_true()
 		{
 			var ticket = new Ticket("delete a customer customer demo by customer id and customer type id");
 			string sql = null;
@@ -94,7 +94,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				parameters = args.Parameters;
 			};
 
-			bool success = northwind.Connection.Delete<CustomerCustomerDemo, string, string>("ALFKI", "Loyal", ticket: ticket);
+			bool success = await northwind.Connection.DeleteAsync<CustomerCustomerDemo, string, string>("ALFKI", "Loyal", ticket: ticket);
 
 			Assert.Equal("DELETE FROM CustomerCustomerDemo WHERE CustomerId = @CustomerId AND CustomerTypeId = @CustomerTypeId;", sql);
 			Assert.NotEmpty(parameters);
@@ -106,7 +106,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void delete_using_lamda_Delete_returns_true()
+		public async Task delete_using_lamda_Delete_returns_true()
 		{
 			var ticket = new Ticket("delete a customer by lambda expression");
 			string sql = null;
@@ -119,7 +119,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 			};
 
 			var productName = "The Mamba Juice";
-			var rowsAffected = northwind.Connection.Delete<Product>(p => p.ProductName == productName, ticket: ticket);
+			var rowsAffected = await northwind.Connection.DeleteAsync<Product>(p => p.ProductName == productName, ticket: ticket);
 
 			Assert.Equal("DELETE FROM Products WHERE ProductName = @ProductName;", sql);
 			Assert.NotEmpty(parameters);
@@ -129,7 +129,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void delete_using_Anonymous_Delete_returns_true()
+		public async Task delete_using_Anonymous_Delete_returns_true()
 		{
 			var ticket = new Ticket("delete order details by id");
 			string sql = null;
@@ -141,7 +141,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				parameters = args.Parameters;
 			};
 
-			var rowsAffected = northwind.Connection.DeleteAnonymous<OrderDetail>(new { OrderId = 10248 }, ticket: ticket);
+			var rowsAffected = await northwind.Connection.DeleteAnonymousAsync<OrderDetail>(new { OrderId = 10248 }, ticket: ticket);
 			
 			Assert.Equal("DELETE FROM \"Order Details\" WHERE OrderId = @OrderId;", sql);
 			Assert.NotEmpty(parameters);
@@ -151,7 +151,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void delete_using_fluent_Delete_returns_true()
+		public async Task delete_using_fluent_Delete_returns_true()
 		{
 			var ticket = new Ticket("delete products by fluent select");
 			string sql = null;
@@ -163,9 +163,9 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				parameters = args.Parameters;
 			};
 
-			var rowsAffected = northwind.Connection.From<Product>()
+			var rowsAffected = await northwind.Connection.From<Product>()
 												   .Where("ProductName", "abc")
-												   .Delete<Product>(ticket: ticket);
+												   .DeleteAsync<Product>(ticket: ticket);
 
 			Assert.Equal("DELETE FROM Products WHERE ProductName = @ProductName;", sql);
 			Assert.NotEmpty(parameters);
@@ -174,7 +174,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		}
 
 		[Fact]
-		public void delete_using_fluent_Delete_with_multiple_where_returns_true()
+		public async Task delete_using_fluent_Delete_with_multiple_where_returns_true()
 		{
 			var ticket = new Ticket("delete products by fluent select with two where clause");
 			string sql = null;
@@ -186,10 +186,10 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 				parameters = args.Parameters;
 			};
 
-			var rowsAffected = northwind.Connection.From<Product>()
+			var rowsAffected = await northwind.Connection.From<Product>()
 												   .Where("ProductName", "abc")
 												   .AndWhere("Discontinued", true)
-												   .Delete<Product>(ticket: ticket);
+												   .DeleteAsync<Product>(ticket: ticket);
 
 			Assert.Equal("DELETE FROM Products WHERE ProductName = @ProductName AND Discontinued = @Discontinued;", sql);
 			Assert.NotEmpty(parameters);
