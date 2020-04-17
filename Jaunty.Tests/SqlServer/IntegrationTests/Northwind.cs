@@ -19,7 +19,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 		{
 			string currentTime = DateTime.Now.ToString("yyyyMMddHHmmss");
 			Name = $"Northwind_{currentTime}";
-			string connectionString = $"server=.;database=;trusted_connection=true;";
+			connectionString = $"server=.;database=;trusted_connection=true;";
 			Connection = new SqlConnection(connectionString);
 			Connection.Execute($"CREATE DATABASE {Name};");
 			connectionString = $"server=.;database={Name};trusted_connection=true;";
@@ -28,6 +28,7 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 		public IDbConnection Connection { get; private set; }
 		public string Name { get; private set; }
+		internal string connectionString { get; private set; }
 
 		public void StageDatabase()
 		{
@@ -77,6 +78,9 @@ namespace Jaunty.Tests.SqlServer.IntegrationTests
 
 		private void DestroyDatabase()
 		{
+			if (string.IsNullOrEmpty(Connection.ConnectionString))
+				Connection.ConnectionString = connectionString;
+
 			Connection.Open();
 			Connection.Execute("msdb..sp_delete_database_backuphistory", new { database_name = Name }, commandType: CommandType.StoredProcedure);
 			Connection.Execute($"ALTER DATABASE {Name} SET OFFLINE WITH ROLLBACK IMMEDIATE;");
