@@ -5,7 +5,13 @@
 		<LangVersion>8.0</LangVersion>
 		<Authors>Syed Beparey</Authors>
 		<Company>Syed Beparey</Company>
-		<Copyright></Copyright>
+		<Copyright>2020 ViewSrc, Inc.</Copyright>
+		<Description>A high performance fluent abstraction layer for Dapper.</Description>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/extrode/jaunty</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/extrode/jaunty</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageTags>sql;orm;micro-orm;dapper;fluent-orm</PackageTags>
 	</PropertyGroup>
 
 	<ItemGroup>
