@@ -158,6 +158,13 @@ namespace Jaunty
 			return Insert<T>(parameters, true, ticket);
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="connection"></param>
+		/// <param name="entity"></param>
+		/// <returns></returns>
 		public static Values Values<T>(this IDbConnection connection, T entity)
 		{
 			if (connection is null)
