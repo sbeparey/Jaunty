@@ -197,7 +197,7 @@ namespace Jaunty
 					type = type.GetGenericArguments()[0];
 				}
 
-				for (var i = 0; i < typeInfo.ImplementedInterfaces.Count(); i++)
+				for (int i = 0; i < typeInfo.ImplementedInterfaces.Count(); i++)
 				{
 					Type implementedInterface = typeInfo.ImplementedInterfaces.ElementAt(i);
 
@@ -259,14 +259,16 @@ namespace Jaunty
 			PropertyInfo[] instanceProperties = type.GetProperties(BindingFlags.Public
 														| BindingFlags.NonPublic
 														| BindingFlags.Instance);
-			var properties = new List<PropertyInfo>();
+			List<PropertyInfo> properties = new List<PropertyInfo>();
 
 			foreach (PropertyInfo property in instanceProperties)
 			{
 				if (property is { CanRead: true, CanWrite: true })
 				{
 					if (property.IsNotIgnored())
+					{
 						properties.Add(property);
+					}
 				}
 			}
 
@@ -300,12 +302,14 @@ namespace Jaunty
 			}
 
 			List<PropertyInfo> properties = GetPropertiesCache(type);
-			var keys = new Dictionary<string, PropertyInfo>(); ;
+			Dictionary<string, PropertyInfo> keys = new Dictionary<string, PropertyInfo>(); ;
 
 			foreach (PropertyInfo property in properties)
 			{
 				if (property.IsKey())
+				{
 					keys.Add(property.Name, property);
+				}
 			}
 
 			if (keys.Count == 0)
@@ -327,9 +331,9 @@ namespace Jaunty
 
 		private static bool IsKey(this PropertyInfo property)
 		{
-			var attributes = property.GetCustomAttributes(false);
+			object[] attributes = property.GetCustomAttributes(false);
 
-			foreach (var attribute in attributes)
+			foreach (object attribute in attributes)
 			{
 				switch (attribute)
 				{
@@ -344,12 +348,14 @@ namespace Jaunty
 
 		private static bool IsManual(this PropertyInfo property)
 		{
-			var attributes = property.GetCustomAttributes(false);
+			object[] attributes = property.GetCustomAttributes(false);
 
-			foreach (var attribute in attributes)
+			foreach (object attribute in attributes)
 			{
 				if (attribute is KeyAttribute key)
+				{
 					return key.Manual;
+				}
 			}
 
 			return false;
@@ -369,7 +375,7 @@ namespace Jaunty
 				return columnsCache;
 			}
 
-			var columns = new Dictionary<string, PropertyInfo>();
+			Dictionary<string, PropertyInfo> columns = new Dictionary<string, PropertyInfo>();
 			List<PropertyInfo> propertyInfos = GetPropertiesCache(type);
 
 			foreach (PropertyInfo property in propertyInfos)
@@ -384,12 +390,14 @@ namespace Jaunty
 
 		private static IList<string> GetNonKeyColumnsCache(Type type)
 		{
-			var allColumns = GetColumnsCache(type);
-			var keys = GetKeysCache(type).Keys.ToList();
-			var nonKeyColumns = allColumns.Keys.ToList().Clone();
+			IDictionary<string, PropertyInfo> allColumns = GetColumnsCache(type);
+			List<string> keys = GetKeysCache(type).Keys.ToList();
+			IList<string> nonKeyColumns = allColumns.Keys.ToList().Clone();
 
-			foreach (var key in keys)
+			foreach (string key in keys)
+			{
 				nonKeyColumns.Remove(key);
+			}
 
 			return nonKeyColumns;
 		}
@@ -410,9 +418,9 @@ namespace Jaunty
 
 		private static string GetColumnNameFromAttribute(PropertyInfo property)
 		{
-			var attributes = property.GetCustomAttributes(false);
+			object[] attributes = property.GetCustomAttributes(false);
 
-			foreach (var attribute in attributes)
+			foreach (object attribute in attributes)
 			{
 				switch (attribute)
 				{
@@ -428,7 +436,10 @@ namespace Jaunty
 
 		private static string EscapeSqlKeywords(string word)
 		{
-			if (string.IsNullOrWhiteSpace(word)) return word;
+			if (string.IsNullOrWhiteSpace(word))
+			{
+				return word;
+			}
 
 			return !SqlKeywords.All.Contains(word, StringComparison.CurrentCultureIgnoreCase)
 				&& !word.Contains(" ", StringComparison.CurrentCultureIgnoreCase)
@@ -467,10 +478,10 @@ namespace Jaunty
 			Type type = GetType(typeof(T));
 			List<PropertyInfo> properties = GetPropertiesCache(type);
 			IDictionary<string, PropertyInfo> columnNames = GetColumnsCache(type);
-			var parameters = new Dictionary<string, object>();
-			var list = entities.ToList();
+			Dictionary<string, object> parameters = new Dictionary<string, object>();
+			List<T> list = entities.ToList();
 
-			for (var i = 0; i < list.Count; i++)
+			for (int i = 0; i < list.Count; i++)
 			{
 				foreach (KeyValuePair<string, PropertyInfo> column in columnNames)
 				{
@@ -485,7 +496,7 @@ namespace Jaunty
 		{
 			Type type = GetType(entity.GetType());
 			IDictionary<string, PropertyInfo> columnNames = GetColumnsCache(type);
-			var parameters = new Dictionary<string, object>();
+			Dictionary<string, object> parameters = new Dictionary<string, object>();
 
 			foreach (KeyValuePair<string, PropertyInfo> column in columnNames)
 			{
