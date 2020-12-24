@@ -30,30 +30,19 @@ namespace Jaunty
 				case ExpressionType.LessThanOrEqual:
 				case ExpressionType.NotEqual:
 				case ExpressionType.Equal:
-					switch (binaryExpression?.Left)
-					{
-						case UnaryExpression leftUnary when leftUnary.Operand is MemberExpression leftUnaryMember:
-							name = leftUnaryMember.Member.Name;
-							break;
-						case MemberExpression member:
-							name = member.Member.Name;
-							break;
-						default:
-							throw new Exception($"Unable to parse the left side of the {nameof(binaryExpression)}");
-					}
-					switch (binaryExpression.Right)
-					{
-						case UnaryExpression rightUnary when rightUnary.Operand is ConstantExpression rightUnaryConstant:
-							value = rightUnaryConstant.Value;
-							break;
-						case ConstantExpression constant:
-							value = constant.Value;
-							break;
-						default:
-							value = Expression.Lambda(binaryExpression.Right).Compile().DynamicInvoke();
-							break;
-					}
-					callback?.Invoke(name, expression.NodeType.ToSqlOperator(), value);
+                    name = (binaryExpression?.Left) switch
+                    {
+                        UnaryExpression leftUnary when leftUnary.Operand is MemberExpression leftUnaryMember => leftUnaryMember.Member.Name,
+                        MemberExpression member => member.Member.Name,
+                        _ => throw new Exception($"Unable to parse the left side of the {nameof(binaryExpression)}"),
+                    };
+                    value = binaryExpression.Right switch
+                    {
+                        UnaryExpression rightUnary when rightUnary.Operand is ConstantExpression rightUnaryConstant => rightUnaryConstant.Value,
+                        ConstantExpression constant => constant.Value,
+                        _ => Expression.Lambda(binaryExpression.Right).Compile().DynamicInvoke(),
+                    };
+                    callback?.Invoke(name, expression.NodeType.ToSqlOperator(), value);
 					break;
 				case ExpressionType.OrElse:
 				case ExpressionType.AndAlso:
