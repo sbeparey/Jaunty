@@ -50,89 +50,50 @@ namespace Jaunty
 			Descending
 		}
 
-		internal static string ToSqlString(this ComparisonOperator oper)
+		internal static string ToSqlString(this ComparisonOperator oper) => oper switch
 		{
-			switch (oper)
-			{
-				case ComparisonOperator.EqualTo:
-					return "=";
-				case ComparisonOperator.GreaterThan:
-					return ">";
-				case ComparisonOperator.LessThan:
-					return "<";
-				case ComparisonOperator.GreaterThanOrEqualTo:
-					return ">=";
-				case ComparisonOperator.LessThanOrEqualTo:
-					return "<=";
-				case ComparisonOperator.NotEqualTo:
-					return "<>";
-				default:
-					return "";
-			}
-		}
+			ComparisonOperator.EqualTo => "=",
+			ComparisonOperator.GreaterThan => ">",
+			ComparisonOperator.LessThan => "<",
+			ComparisonOperator.GreaterThanOrEqualTo => ">=",
+			ComparisonOperator.LessThanOrEqualTo => "<=",
+			ComparisonOperator.NotEqualTo => "<>",
+			_ => ""
+		};
 
-		internal static ComparisonOperator ToComparisonOperator(this string o)
+		internal static ComparisonOperator ToComparisonOperator(this string o) => o switch
 		{
-			switch (o)
-			{
-				case "=":
-					return ComparisonOperator.EqualTo;
-				case ">":
-					return ComparisonOperator.GreaterThan;
-				case "<":
-					return ComparisonOperator.LessThan;
-				case ">=":
-					return ComparisonOperator.GreaterThanOrEqualTo;
-				case "<=":
-					return ComparisonOperator.LessThanOrEqualTo;
-				case "<>":
-				case "!=":
-					return ComparisonOperator.NotEqualTo;
-				default:
-					return ComparisonOperator.Empty;
-			}
-		}
+			"=" => ComparisonOperator.EqualTo,
+			">" => ComparisonOperator.GreaterThan,
+			"<" => ComparisonOperator.LessThan,
+			">=" => ComparisonOperator.GreaterThanOrEqualTo,
+			"<=" => ComparisonOperator.LessThanOrEqualTo,
+			"<>" => ComparisonOperator.NotEqualTo,
+			"!=" => ComparisonOperator.NotEqualTo,
+			_ => ComparisonOperator.Empty
+		};
 
-		internal static string ToSqlString(this Separator separator)
+		internal static string ToSqlString(this Separator separator) => separator switch
 		{
-			switch (separator)
-			{
-				case Separator.And:
-					return "AND";
-				case Separator.Or:
-					return "OR";
-				default:
-					throw new Exception("Not a valid separator");
-			}
-		}
+			Separator.And => "AND",
+			Separator.Or => "OR",
+			_ => throw new Exception("Not a valid separator")
+		};
 
-		internal static Separator ToSeparator(this string s)
+		internal static Separator ToSeparator(this string s) => s switch
 		{
-			switch (s)
-			{
-				case "AND":
-					return Separator.And;
-				case "OR":
-					return Separator.Or;
-				default:
-					return Separator.Empty;
-			}
-		}
+			"AND" => Separator.And,
+			"OR" => Separator.Or,
+			_ => Separator.Empty
+		};
 
-		internal static string ToSqlString(this JoinType joinType)
+		internal static string ToSqlString(this JoinType joinType) => joinType switch
 		{
-			switch (joinType)
-			{
-				case JoinType.InnerJoin:
-					return "INNER JOIN";
-				case JoinType.LeftOuterJoin:
-					return "LEFT OUTER JOIN";
-				case JoinType.RightOuterJoin:
-					return "RIGHT OUTER JOIN";
-			}
-
-			return null;
-		}
+			JoinType.InnerJoin => "INNER JOIN",
+			JoinType.LeftOuterJoin => "LEFT OUTER JOIN",
+			JoinType.RightOuterJoin => "RIGHT OUTER JOIN",
+			_ => null
+		};
 
 		[Flags]
 		internal enum ComparisonOperator
@@ -355,7 +316,7 @@ namespace Jaunty
 				if (attribute is KeyAttribute key)
 				{
 					return key.Manual;
-				}
+				} 
 			}
 
 			return false;
